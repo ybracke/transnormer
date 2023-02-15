@@ -1,0 +1,27 @@
+[project]
+name = "transnormer"
+version = "0.1.0"
+description = "A lexical normalizer for historical spelling variants using a transformer architecture."
+authors = [
+  { name = "Yannic Bracke (BBAW)", email="yannic.bracke@bbaw.de" },
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3.9+",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "transformers == 4.26.0",
+    "datasets == 2.8.0",
+    "tomli == 2.0.1",
+    "codecarbon == 2.1.4"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ybracke/transnormer"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

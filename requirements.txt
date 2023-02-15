@@ -1,0 +1,9 @@
+# local package
+-e .
+
+# external requirements
+transformers==4.26.0
+datasets==2.8.0
+tomli==2.0.1
+codecarbon==2.1.4
+python-dotenv>=0.5.1

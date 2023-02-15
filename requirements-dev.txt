@@ -1,0 +1,4 @@
+black>=22.0.0
+flake8>=4.0.0
+mypy>=0.7
+pytest>=7.0
