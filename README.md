@@ -97,12 +97,13 @@ pip install -e .
 
 To run the training script, you also need a toml file called `training_config.toml`
 with training configuration parameters. The file `training_config_TEMPLATE.toml`
-is a template for this. [**NOTE: This will probably be changed in later versions**]
+is a template for this.  
+**NOTE: This will probably be changed in later versions, see issues [6](https://github.com/ybracke/transnormer/issues/6) and [7](https://github.com/ybracke/transnormer/issues/7)**
 
 
 ## Usage
 
-Run the training script.
+Run the training script:
 
 ```bash
 cd src/transnormer/models
@@ -145,31 +146,5 @@ lexical normalization.
   * Corresponding [colab notebook](https://colab.research.google.com/drive/1Ekd5pUeCX7VOrMx94_czTkwNtLN32Uyu?usp=sharing)
 * Paper ["Leveraging Pre-trained Checkpoints for Sequence Generation Tasks"](https://arxiv.org/abs/1907.12461)
 
-
-## TODOs and future lines of inquiry (possible issues)
-
-* Make GitHub issues out of these points
-* See `#TODO` in `model_train.py`
-* Remove codecarbon again
-* Remove all params from `model_train.py` and put them into `training_config.toml`
-* Use a [dvc pipeline](https://dvc.org/doc/start/data-management/data-pipelines) to track experiment runs and parameter configurations
-* Use character-based models instead of subword-tokens
-* Can additional information be leveraged like the publication year or era
-* How does the model deal with names?
-* Experiment with a loss function that punishes wrongly changed words more than
-  wrongly unchanged words (see Bollmann?) to get a "conservative" normalization 
-* How well does the model work if we replace the pre-trained decoder with a
-  randomly initialized one (BERT2Rnd)?
-* Fine-tune encoder
-* Fine-tune decoder
-
-### Tokenizer consistency
-
-I am currently using two different tokenizers, one for historical language and
-one for modern language. It seems to be common (or the only possible way?) to
-use only a single tokenizer if you want to create a huggingface model
-(`transformers.EncoderDecoderModel`) including a tokenizer. 
-
----
 
 
