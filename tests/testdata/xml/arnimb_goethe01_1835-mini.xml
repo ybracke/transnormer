@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+ ! This file was constructed from the file arnimb_goethe01_1835.xml in the DTA EvalCorpus
+ ! for testing the data loaders of the `transnormer` package.
+
+ ! Original comment:
+ 
+ !  File: arnimb_goethe01_1835.tj
+ !  Corpus: DTA EvalCorpus v0.02, 2016-08-22
+ !  Description: token-aligned training+evaluation data for canonicalization and error-correction
+ !  Contact: Bryan Jurish <jurish@bbaw.de>
+ !  Contributors: Bryan Jurish, Henriette Ast, Marko Drotschmann, and Christian Thomas
+ !  
+ !  Licensing:
+ !    This corpus was created by semi-automatic alignment of a Deutsches Textarchiv (DTA)
+ !    text with a contemporary edition drawn from Project Gutenberg and/or the TextGrid
+ !    Digital Library.
+ !  
+ !    The Deutsches Textarchiv text sources are distributed under the terms of the
+ !    Creative Commons Attribution-NonCommercial 3.0 Unported License, see
+ !    http://creativecommons.org/licenses/by-nc/3.0/ and
+ !    http://www.deutschestextarchiv.de/book/show/arnimb_goethe01_1835/
+ !  
+ !    Contemporary text sources from Project Gutenberg are distributed under the terms
+ !    of the The Project Gutenberg License, see
+ !    http://www.gutenberg.org/wiki/Gutenberg:The_Project_Gutenberg_License
+ !  
+ !    Contemporary text sources from the TextGrid Digital Library were provided
+ !    by TextGrid from the data stock of TextGrid's Digital Library, www.editura.de,
+ !    and are published under the Creative Commons "by" license version 3.0, see
+ !    http://creativecommons.org/licenses/by/3.0/ and http://textgrid.de/en/digitale-bibliothek
+ !  
+ !    The aligned corpus and this file are distributed under the terms of the
+ !    Creative Commons Attribution-NonCommercial 3.0 Unported License, see
+ !    http://creativecommons.org/licenses/by-nc/3.0/
+ !  
+ !  Attribution:
+ !    If you make use of this corpus in your research, we ask that you cite one
+ !    or both of the following articles in any associated publications:
+ !  
+ !    Jurish, B., M. Drotschmann, & H. Ast. "Constructing a canonicalized corpus of
+ !      historical German by text alignment." In P. Bennett, M. Durrell, S.
+ !      Scheible, and R. J. Whitt (editors), New Methods in Historical Corpora,
+ !      volume 3 of Corpus Linguistics and Interdisciplinary Perspectives on
+ !      Language (CLIP), pages 221-234. Narr, Tübingen, 2013.
+ !  
+ !    Jurish, B. & H. Ast. "Using an alignment-based lexicon for canonicalization
+ !      of historical text." In J. Gippert & R. Gehrke (editors), Historical
+ !      Corpora: Challenges and Perspectives, volume 5 of Corpus Linguistics and
+ !      Interdisciplinary Perspectives on Language (CLIP), pages 197-208. Narr,
+ !      Tübingen, 2015.
+ !-->
+<doc base="arnimb_goethe01_1835" dok="1">
+  <body><s sok="1">
+      <w class="LEX" new="da" old="da" pok="1" unaligned="1" wok="1"/>
+      <w class="LEX" new="weiß" old="weiß" pok="1" wok="1"/>
+      <w class="LEX" new="ich" old="ich" pok="1" wok="1"/>
+      <w class="JOIN" new="soviel" old="ſo viel" pok="1" wok="1">
+        <w class="JOIN" new="so" old="ſo" pok="1" wok="1"/>
+        <w class="JOIN" new="viel" old="viel" pok="1" wok="1"/>
+      </w>
+      <w class="LEX" new="wie" old="wie" pok="1" wok="1"/>
+      <w class="LEX" new="nichts" old="nichts" pok="1" wok="1"/>
+      <w class="LEX" new="." old="." pok="1" wok="1"/>
+    </s>
+    <s sok="1">
+      <w class="LEX" new="—" old="—" pok="1" unaligned="1" wok="1"/>
+      <w class="LEX" new="es" old="es" pok="1" unaligned="1" wok="1"/>
+      <w class="LEX" new="ist" old="iſt" pok="1" wok="1"/>
+      <w class="LEX" new="ja" old="ja" pok="1" wok="1"/>
+      <w class="LEX" new="nicht" old="nicht" pok="1" wok="1"/>
+      <w class="SPLIT" new="über das" old="über’s" pok="1" wok="1"/>
+      <w class="LEX" new="Meer" old="Meer" pok="1" wok="1"/>
+      <w class="LEX" new="bis" old="bis" pok="1" wok="1"/>
+      <w class="LEX" new="nach" old="nach" pok="1" wok="1"/>
+      <w class="LEX" new="Weimar" old="Weimar" pok="1" wok="1"/>
+      <w class="LEX" new="." old="." pok="1" wok="1"/>
+    </s>
+    <s>
+      <w class="LEX" new="—" old="—" pok="1" unaligned="1"/>
+      <w class="LEX" new="Ein" old="Ein" pok="1"/>
+      <w class="LEX" new="Schelm" old="Schelm" pok="1"/>
+      <w bad="1" class="SPLIT" new="gibt es" old="giebt’s" pok="1" seen="1"/>
+      <w class="LEX" new="besser" old="beſſer" pok="1"/>
+      <w class="LEX" new="als" old="als" pok="1"/>
+      <w class="LEX" new="er das" old="er’s" pok="1"/>
+      <w class="LEX" new="hat" old="hat" pok="1"/>
+      <w class="LEX" new="." old="." pok="1"/>
+    </s>
+  </body>
+</doc>
