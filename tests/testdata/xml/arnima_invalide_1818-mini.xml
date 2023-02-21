@@ -162,5 +162,22 @@
       <w class="LEX" new="landen" old="landen" pok="1" wok="1"/>
       <w class="LEX" new="." old="." pok="1" wok="1"/>
     </s>
+    <s>
+      <w class="LEX" new="rief" old="rief" pok="1"/>
+      <w class="LEX" new="Basset" old="Baſſet" pok="1"/>
+      <w class="LEX" new="," old="," pok="1"/>
+      <w class="LEX" new="er" old="er" pok="1"/>
+      <w class="LEX" new="sprengt" old="ſprengt" pok="1"/>
+      <w class="LEX" new="sich" old="ſich" pok="1"/>
+      <w class="LEX" new="in" old="in" pok="1"/>
+      <w bad="1" class="BUG" new="die Luft" old="dieLuft" seen="1"/>
+      <w class="LEX" new="," old="," pok="1"/>
+      <w class="LEX" new="rettet" old="rettet" pok="1"/>
+      <w class="LEX" new="Euch" old="euch" pok="1"/>
+      <w class="LEX" new="und" old="und" pok="1"/>
+      <w class="LEX" new="Euer" old="euer" pok="1"/>
+      <w class="LEX" new="Kind" old="Kind" pok="1"/>
+      <w class="LEX" new="!" old="!" pok="1"/>
+    </s>
   </body>
 </doc>
