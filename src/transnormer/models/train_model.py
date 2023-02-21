@@ -18,7 +18,7 @@ from transformers import AutoTokenizer
 from tokenizers.normalizers import Normalizer
 from tokenizers import NormalizedString
 
-from transnormer.data.loader import load_dtaeval_all
+from transnormer.data.loader import load_dtaevalxml_all
 
 # TODO pass this on the command-line
 ROOT = "/home/bracke/code/transnormer"
@@ -201,7 +201,9 @@ if __name__ == "__main__":
     ##################  Load data ###########################
     print("Loading the data ...")
 
-    dta_dataset = load_dtaeval_all()
+    # TODO: Should the path be hard-coded?
+    DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.0/xml"
+    dta_dataset = load_dtaevalxml_all(DATADIR, filter_classes=["BUG", "FM", "GRAPH"])
 
     # Create smaller datasets from random examples
     if "subset_sizes" in configs:
