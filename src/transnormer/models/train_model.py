@@ -25,81 +25,6 @@ ROOT = "/home/bracke/code/transnormer"
 CONFIGFILE = os.path.join(ROOT, "training_config.toml")
 
 
-# # Tracking time, memory, carbon
-# tracker = codecarbon.OfflineEmissionsTracker(
-#     country_iso_code="DEU", log_level="warning"
-# )
-
-# # Logging
-# timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-# logging.basicConfig(
-#     filename=f"run_{timestamp}.log",
-#     level=logging.INFO,
-# )
-
-
-
-
-# not used yet
-def add_gold_labels(
-    example: datasets.formatting.formatting.LazyRow,
-) -> datasets.formatting.formatting.LazyRow:
-    """
-    Additional data augmentation
-    Add a column to the datasets: copy of "input_ids" called "labels"
-    During training the data collator will mask the "input_ids" and the "labels"
-    will serve as the gold labels
-
-    LazyRow behaves like Dict[str, List[Any]]
-    """
-    example["labels"] = example["input_ids"].copy()
-    return example
-
-
-# not used yet
-def train_one_epoch(
-    train_dataloader: DataLoader, optimizer: torch.optim.Optimizer
-) -> Tuple[float, float]:
-    """Train one iteration over the dataset"""
-
-    running_loss = 0.0
-    running_loss_total = 0.0
-    last_avg_loss_after_n_batches = 0.0
-
-    for i, batch in enumerate(train_dataloader):
-        # Move tensors to GPU
-        batch = {k: v.to(device) for k, v in batch.items()}
-
-        # Zero the gradients for every batch
-        optimizer.zero_grad()
-
-        # Make predictions for this batch
-        outputs: transformers.modeling_outputs.MaskedLMOutput = model(**batch)
-
-        # Compute the loss and its gradients
-        loss = outputs.loss  # tensor of shape (1,)
-        loss.backward()
-
-        # Adjust learning weights
-        optimizer.step()
-
-        # Gather data and report
-        running_loss += loss.item()
-        running_loss_total += loss.item()
-
-        # Report avg loss after every `m` batches
-        m = configs["training_hyperparams"]["report_avg_loss_after_n_batches"]
-        if i % m == (m - 1):
-            last_avg_loss_after_n_batches = running_loss / m  #
-            print(f"  batch {i+1} loss: {last_avg_loss_after_n_batches}")
-            running_loss = 0.0
-
-        # Average loss per training batch
-        avg_loss = running_loss_total / (i + 1)
-
-    return avg_loss, last_avg_loss_after_n_batches
-
-
 # not used yet
 def train(
     model: transformers.BertForMaskedLM,
@@ -108,50 +33,6 @@ def train(
     optimizer: torch.optim.Optimizer,
 ) -> None:
     """Training loop"""
-
-    best_vloss = 1_000_000.0
-
-    # File to track epochs, losses and resource usage
-    # (for now just time, #TODO possibly memory, enery)
-    with open(os.path.join(run_dir, "stats.csv"), "w", encoding="utf-8") as f:
-        f.write(
-            "epoch,avg_loss_train,avg_loss_last_train_batches,avg_loss_val,duration\n"
-        )
-        f.flush()
-
-        for epoch in range(1, configs["training_hyperparams"]["epochs"] + 1):
-            start_epoch = time.time()
-            print(f"EPOCH {epoch}:")
-
-            # Make sure gradient tracking is on, and do a pass over the data
-            model.train(True)
-            avg_loss, last_avg_loss = train_one_epoch(train_dataloader, optimizer)
-
-            # 2. Performance on the validation set
-            # We don't need gradients on to do reporting
-            model.train(False)
-
-            running_vloss = 0.0
-            for i, vbatch in enumerate(val_dataloader):
-                # Move tensors to GPU
-                vbatch = {k: v.to(device) for k, v in vbatch.items()}
-                outputs = model(**vbatch)
-                loss = outputs.loss
-                running_vloss += loss.item()
-
-            # Average loss per validation batch
-            avg_vloss = running_vloss / (i + 1)
-            print(f"LOSS train: {avg_loss}; valid: {avg_vloss}")
-            f.write(
-                f"{epoch},{avg_loss:.5f},{last_avg_loss:.5f},{avg_vloss:.5f},{time.time() - start_epoch:.2f}\n"
-            )
-            f.flush()
-
-            # Track best performance, and save the model's state
-            if avg_vloss < best_vloss:
-                best_vloss = avg_vloss
-                model_path = os.path.join(run_dir, f"models/model_epoch_{epoch}")
-                model.save_pretrained(model_path)
 
     return None
 
@@ -187,12 +68,6 @@ if __name__ == "__main__":
     start_all = time.time()
     tracemalloc.start()
     # tracker.start()
-
-    # # Timestamp is used for naming output files/dirs
-    # timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    # run_dir = f"runs/run_{timestamp}"
-    # if not os.path.exists(run_dir):
-    #     os.makedirs(run_dir)
 
     # GPU set-up
     device = torch.device(configs["gpu"] if torch.cuda.is_available() else "cpu")
@@ -346,66 +221,11 @@ if __name__ == "__main__":
 
     #### Saving the model
     ## this works
-    
     model_path = os.path.join(ROOT,f"./models/models_{timestamp}/model_final/")
     model.save_pretrained(model_path)
     ## this fails because a custom tokenizer can't be saved
     # model_path = f"./models/model_fromtrainer/"
     # trainer.save_model(model_path)
 
-    # # This is from dta-bert.py, if I use native pytorch for the training loop,
-    # # this would become relevant again
-    # optimizer = torch.optim.SGD(
-    #     model.parameters(),
-    #     lr=configs["training_hyperparams"]["learning_rate"],
-    #     momentum=configs["training_hyperparams"]["momentum"],
-    # )
-    # train(model, train_dataloader, val_dataloader, optimizer)
-
-    # # Stop time, memory, emissions tracking
-    # # tracker.stop()
-    # mem_current, mem_peak = tracemalloc.get_traced_memory()
-    # tracemalloc.stop()
-    # print(
-    #     f"Memory usage - Current: {mem_current/1024:.2f} MiB | Peak: {mem_peak/1024:.2f} MiB"
-    # )
-    # end_all = time.time()
-    # print(f"Elapsed time (total): {end_all - start_all}")
 
 
-
-
-    # ################## ~ end of training #######################
-
-
-
-
-
-    # ################## Application #############################
-
-    # This is the same as in apply_transnomer.ipynb
-    print("Application")
-
-    def generate_normalization(batch):
-        inputs = tokenizer_hmbert_custom(batch["orig"], padding="max_length", truncation=True, max_length=128, return_tensors="pt")
-        input_ids = inputs.input_ids.to(device)
-        attention_mask = inputs.attention_mask.to(device)
-
-        outputs = model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=128)
-
-        output_str = tokenizer_bert.batch_decode(outputs, skip_special_tokens=True)
-
-        # batch["norm_pred_ids"] = outputs
-        batch["norm_pred_str"] = output_str
-
-        return batch
-
-    batch_size = 4  # change to 64 for full evaluation
-
-    results = dta_dataset["validation"].select(range(batch_size)).map(
-        generate_normalization,
-        batched=True,
-        batch_size=batch_size,
-    )
-
-    print(results)
