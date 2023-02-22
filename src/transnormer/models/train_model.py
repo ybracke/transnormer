@@ -18,11 +18,7 @@ from transformers import AutoTokenizer
 from tokenizers.normalizers import Normalizer
 from tokenizers import NormalizedString
 
-from transnormer.data.loader import load_dtaevalxml_all
-
-# TODO pass this on the command-line
-ROOT = "/home/bracke/code/transnormer"
-CONFIGFILE = os.path.join(ROOT, "training_config.toml")
+from transnormer.data.loader import load_dtaevalxml_all, load_dtaeval_all
 
 
 def tokenize_input_and_output(
@@ -78,12 +74,13 @@ def train(
 class CustomNormalizer:
     def normalize(self, normalized: NormalizedString):
         # Decompose combining characters
-        normalized.nfd()  
+        normalized.nfd()
         # Some character conversions
         normalized.replace("ſ", "s")
         normalized.replace("ꝛ", "r")
         normalized.replace(chr(0x0303), "")  # drop combining tilde
-        normalized.replace(chr(0x0364), "e") # convert "Combining Latin Small Letter E" to "e"
+        # convert "Combining Latin Small Letter E" to "e"
+        normalized.replace(chr(0x0364), "e")
         normalized.replace("æ", "ae")
         normalized.replace("ů", "ü")
         normalized.replace("Ů", "Ü")
@@ -91,16 +88,22 @@ class CustomNormalizer:
         normalized.nfc()
 
 
-if __name__ == "__main__":
+# TODO pass this on the command-line
+ROOT = "/home/bracke/code/transnormer"
+CONFIGFILE = os.path.join(ROOT, "training_config.toml")
+# Load configs
+with open(CONFIGFILE, mode="rb") as fp:
+    CONFIGS = tomli.load(fp)
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+MODELDIR=os.path.join(ROOT, f"./models/models_{timestamp}")
 
-    # Load configs
-    with open(CONFIGFILE, mode="rb") as fp:
-        configs = tomli.load(fp)
+if __name__ == "__main__":
+    # (1) Preparations
 
     # Fix seeds for reproducibilty
-    random.seed(configs["random_seed"])
-    np.random.seed(configs["random_seed"])
-    torch.manual_seed(configs["random_seed"])
+    random.seed(CONFIGS["random_seed"])
+    np.random.seed(CONFIGS["random_seed"])
+    torch.manual_seed(CONFIGS["random_seed"])
 
     # Start tracking time, memory, emissions
     start_all = time.time()
@@ -108,61 +111,54 @@ if __name__ == "__main__":
     # tracker.start()
 
     # GPU set-up
-    device = torch.device(configs["gpu"] if torch.cuda.is_available() else "cpu")
+    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
 
+    # (2) Load data
 
-    ##################  Load data ###########################
     print("Loading the data ...")
 
-    # TODO: Should the path be hard-coded?
-    # DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.0/xml"
-    # dta_dataset = load_dtaevalxml_all(DATADIR, filter_classes=["BUG", "FM", "GRAPH"])
-    # DEBUG
-    from transnormer.data.loader import load_dtaeval_all
-    DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.1/txt"
-    dta_dataset = load_dtaeval_all(DATADIR)
+    # FIXME: currently one has to edit to get the right loading function depending on
+    # input data; this should be handled in data.loader somehow
+    # dta_dataset = load_dtaevalxml_all(CONFIGS["data"]["path"], filter_classes=["BUG", "FM", "GRAPH"])
+    dta_dataset = load_dtaeval_all(CONFIGS["data"]["path"])
 
     # Create smaller datasets from random examples
-    if "subset_sizes" in configs:
-        train_size = configs["subset_sizes"]["train"]
-        validation_size = configs["subset_sizes"]["validation"]
-        test_size = configs["subset_sizes"]["test"]
+    if "subset_sizes" in CONFIGS:
+        train_size = CONFIGS["subset_sizes"]["train"]
+        validation_size = CONFIGS["subset_sizes"]["validation"]
+        test_size = CONFIGS["subset_sizes"]["test"]
         dta_dataset["train"] = dta_dataset["train"].shuffle().select(range(train_size))
-        dta_dataset["validation"] = (
-            dta_dataset["validation"].shuffle().select(range(validation_size))
-        )
+        dta_dataset["validation"] = dta_dataset["validation"].shuffle().select(range(validation_size))
         dta_dataset["test"] = dta_dataset["test"].shuffle().select(range(test_size))
 
+    # (3) Tokenize data
 
-    # ################## Tokenization #########################
     print("Tokenizing and preparing the data ...")
     start = time.process_time()
 
     # Load tokenizers
-    tokenizer_hmbert_custom = AutoTokenizer.from_pretrained(
-        "dbmdz/bert-base-historic-multilingual-cased"
+    tokenizer_input = AutoTokenizer.from_pretrained(
+        CONFIGS["language_models"]["checkpoint_encoder"]
     )
-    tokenizer_hmbert_custom.backend_tokenizer.normalizer = Normalizer.custom(
-        CustomNormalizer()
-    )
+    tokenizer_input.backend_tokenizer.normalizer = Normalizer.custom(CustomNormalizer())
 
-    tokenizer_bert = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    tokenizer_output = AutoTokenizer.from_pretrained(CONFIGS["language_models"]["checkpoint_decoder"])
 
     tokenization_kwargs = {
-        "tokenizer_input": tokenizer_hmbert_custom, 
-        "tokenizer_output": tokenizer_bert,
-        # TODO: Maximum tokens for input and output; these values are picked randomly
-        "max_length_input": 128,
-        "max_length_output": 128,
-        }
+        # FIXME: it is unclear how/if a custom tokenizer can be passed as a parameter
+        "tokenizer_input": tokenizer_input,
+        "tokenizer_output": tokenizer_output,
+        "max_length_input": CONFIGS["tokenizer"]["max_length_input"],
+        "max_length_output": CONFIGS["tokenizer"]["max_length_output"],
+    }
 
     # Tokenize by applying a mapping
     prepared_dataset = dta_dataset.map(
         tokenize_input_and_output,
         fn_kwargs=tokenization_kwargs,
-        batched=True,
-        batch_size=configs["training_hyperparams"]["batch_size"],
         remove_columns=["orig", "norm"],
+        batched=True,
+        batch_size=CONFIGS["training_hyperparams"]["batch_size"],
     )
 
     # Convert to torch tensors
@@ -174,56 +170,50 @@ if __name__ == "__main__":
     end = time.process_time()
     print(f"Elapsed time for tokenization: {end - start}")
 
-
-    # ################## Warm-start the model #################
+    # (4) Load models
 
     print("Loading the pre-trained models ...")
 
     model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-        configs["language_models"]["checkpoint_encoder"],
-        configs["language_models"]["checkpoint_decoder"],
+        CONFIGS["language_models"]["checkpoint_encoder"],
+        CONFIGS["language_models"]["checkpoint_decoder"],
     ).to(device)
 
-    # The following two sections were just copied from here:
-    # https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
     # Setting the special tokens
-    model.config.decoder_start_token_id = tokenizer_bert.cls_token_id
-    model.config.eos_token_id = tokenizer_bert.sep_token_id
-    model.config.pad_token_id = tokenizer_hmbert_custom.pad_token_id # 0
-    # model.config.vocab_size = model.config.encoder.vocab_size
+    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
+    model.config.eos_token_id = tokenizer_output.sep_token_id
+    model.config.pad_token_id = tokenizer_output.pad_token_id
+    # model.config.vocab_size = model.config.encoder.vocab_size # TODO
 
-    # Params for beam search decoding (see https://huggingface.co/blog/how-to-generate)
-    model.config.max_length = 128
-    # model.config.min_length = 56
-    model.config.no_repeat_ngram_size = 3 # ???
-    model.config.early_stopping = True
-    model.config.length_penalty = 2.0
-    model.config.num_beams = 4
+    # Params for beam search decoding
+    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
+    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"]["no_repeat_ngram_size"]
+    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
+    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
+    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
 
+    # (5) Training
 
-    # ################## Training #############################
     print("Training ...")
 
-
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    
     training_args = transformers.Seq2SeqTrainingArguments(
-        output_dir=os.path.join(ROOT,f"./models/models_{timestamp}/"),
+        output_dir=MODELDIR,
         predict_with_generate=True,
-        evaluation_strategy="steps",
-        fp16=True,
-        eval_steps=1000,
-        num_train_epochs=configs["training_hyperparams"]["epochs"],
-        per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
-        per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
-        # logging_steps=2,
-        # save_steps defaults to 500 -> TODO increase this
-        # save_steps=5000, # ? doesn't work because a custom tokenizer can't be saved
+        evaluation_strategy=CONFIGS["training_hyperparams"]["eval_strategy"],
+        fp16=CONFIGS["training_hyperparams"]["fp16"],
+        eval_steps=CONFIGS["training_hyperparams"]["eval_steps"],
+        num_train_epochs=CONFIGS["training_hyperparams"]["epochs"],
+        per_device_train_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
+        per_device_eval_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
+        save_steps=CONFIGS["training_hyperparams"][
+            "save_steps"
+        ],  # Does this work? (custom tokenizer can't be saved)
     )
 
-    # instantiate trainer
+    # Instantiate trainer
     trainer = transformers.Seq2SeqTrainer(
         model=model,
-        # tokenizer=tokenizer_hmbert_custom,
         args=training_args,
         train_dataset=prepared_dataset["train"],
         eval_dataset=prepared_dataset["validation"],
@@ -232,13 +222,10 @@ if __name__ == "__main__":
 
     trainer.train()
 
-    #### Saving the model
-    ## this works
-    model_path = os.path.join(ROOT,f"./models/models_{timestamp}/model_final/")
+    # (6) Saving the final model
+
+    model_path = os.path.join(MODELDIR,"model_final/")
     model.save_pretrained(model_path)
     ## this fails because a custom tokenizer can't be saved
     # model_path = f"./models/model_fromtrainer/"
     # trainer.save_model(model_path)
-
-
-
