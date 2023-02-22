@@ -25,6 +25,39 @@ ROOT = "/home/bracke/code/transnormer"
 CONFIGFILE = os.path.join(ROOT, "training_config.toml")
 
 
+# This is from here: 
+# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
+def process_data_to_model_inputs(batch):
+    # tokenize the inputs and labels
+    inputs = tokenizer_hmbert_custom(
+        batch["orig"],
+        padding="max_length",
+        truncation=True,
+        max_length=encoder_max_length,
+    )
+    outputs = tokenizer_bert(
+        batch["norm"],
+        padding="max_length",
+        truncation=True,
+        max_length=decoder_max_length,
+    )
+
+    batch["input_ids"] = inputs.input_ids
+    batch["attention_mask"] = inputs.attention_mask
+    batch["labels"] = outputs.input_ids.copy()
+
+    # because BERT automatically shifts the labels, the labels correspond exactly to `decoder_input_ids`.
+    # We have to make sure that the PAD token is ignored
+    batch["labels"] = [
+        [
+            -100 if token == tokenizer_bert.pad_token_id else token
+            for token in labels
+        ]
+        for labels in batch["labels"]
+    ]
+
+    return batch
+
 # not used yet
 def train(
     model: transformers.BertForMaskedLM,
@@ -110,41 +143,7 @@ if __name__ == "__main__":
     encoder_max_length = 128
     decoder_max_length = 128
 
-
-    # This is from here: 
-    # https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
-    def process_data_to_model_inputs(batch):
-        # tokenize the inputs and labels
-        inputs = tokenizer_hmbert_custom(
-            batch["orig"],
-            padding="max_length",
-            truncation=True,
-            max_length=encoder_max_length,
-        )
-        outputs = tokenizer_bert(
-            batch["norm"],
-            padding="max_length",
-            truncation=True,
-            max_length=decoder_max_length,
-        )
-
-        batch["input_ids"] = inputs.input_ids
-        batch["attention_mask"] = inputs.attention_mask
-        batch["labels"] = outputs.input_ids.copy()
-
-        # because BERT automatically shifts the labels, the labels correspond exactly to `decoder_input_ids`.
-        # We have to make sure that the PAD token is ignored
-        batch["labels"] = [
-            [
-                -100 if token == tokenizer_bert.pad_token_id else token
-                for token in labels
-            ]
-            for labels in batch["labels"]
-        ]
-
-        return batch
-
-    # Apply the mapping above
+    # Tokenize by applying a mapping
     prepared_dataset = dta_dataset.map(
         process_data_to_model_inputs,
         batched=True,
