@@ -197,38 +197,35 @@ def load_dtaevalxml_all(datadir, **kwargs) -> datasets.DatasetDict:
     return ds
 
 
-# deprecated functions
 
-# @timer
-# def load_dtaeval_all() -> datasets.DatasetDict:
-#     datadir = "/home/bracke/data/dta/dtaeval/split-v3.1/txt"
+@timer
+def load_dtaeval_all(datadir) -> datasets.DatasetDict:
+    train_path = os.path.join(datadir, "train")
+    validation_path = os.path.join(datadir, "dev")
+    test_path = os.path.join(datadir, "test")
 
-#     train_path = os.path.join(datadir, "train")
-#     validation_path = os.path.join(datadir, "dev")
-#     test_path = os.path.join(datadir, "test")
+    ds = datasets.DatasetDict()
+    ds["train"] = load_dtaeval_as_dataset(train_path)
+    ds["validation"] = load_dtaeval_as_dataset(validation_path)
+    ds["test"] = load_dtaeval_as_dataset(test_path)
 
-#     ds = datasets.DatasetDict()
-#     ds["train"] = load_dtaeval_as_dataset(train_path)
-#     ds["validation"] = load_dtaeval_as_dataset(validation_path)
-#     ds["test"] = load_dtaeval_as_dataset(test_path)
-
-#     return ds
+    return ds
 
 
-# def load_dtaeval_as_dataset(path: str) -> datasets.Dataset:
-#     """
-#     Load the file(s) under `path` into a datasets.Dataset with columns "orig"
-#     and "norm"
-#     """
+def load_dtaeval_as_dataset(path: str) -> datasets.Dataset:
+    """
+    Load the file(s) under `path` into a datasets.Dataset with columns "orig"
+    and "norm"
+    """
 
-#     docs = [load_tsv_to_lists(file, keep_sentences=True) for file in file_gen(path)]
-#     docs_sent_joined = [
-#         [[" ".join(sent) for sent in column] for column in doc] for doc in docs
-#     ]
+    docs = [load_tsv_to_lists(file, keep_sentences=True) for file in file_gen(path)]
+    docs_sent_joined = [
+        [[" ".join(sent) for sent in column] for column in doc] for doc in docs
+    ]
 
-#     all_sents_orig, all_sents_norm = [], []
-#     for doc_orig, doc_norm in docs_sent_joined:
-#         all_sents_orig.extend([sent for sent in doc_orig])
-#         all_sents_norm.extend([sent for sent in doc_norm])
+    all_sents_orig, all_sents_norm = [], []
+    for doc_orig, doc_norm in docs_sent_joined:
+        all_sents_orig.extend([sent for sent in doc_orig])
+        all_sents_norm.extend([sent for sent in doc_norm])
 
-#     return datasets.Dataset.from_dict({"orig": all_sents_orig, "norm": all_sents_norm})
+    return datasets.Dataset.from_dict({"orig": all_sents_orig, "norm": all_sents_norm})

@@ -92,4 +92,4 @@ target/
 temp/
 
 # Don't track the models
-./models/
+models/*
