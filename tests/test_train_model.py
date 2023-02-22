@@ -74,7 +74,7 @@ def test_parameter_loading():
             }
     }
     
-    path = "training_config.toml"
+    path = "training_config_template.toml"
     with open(path, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
     assert CONFIGS == target_param_dict
