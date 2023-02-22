@@ -25,38 +25,43 @@ ROOT = "/home/bracke/code/transnormer"
 CONFIGFILE = os.path.join(ROOT, "training_config.toml")
 
 
-# This is from here: 
-# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
-def process_data_to_model_inputs(batch):
-    # tokenize the inputs and labels
-    inputs = tokenizer_hmbert_custom(
+def tokenize_input_and_output(
+    batch, tokenizer_input, tokenizer_output, max_length_input, max_length_output
+):
+    """
+    Tokenizes a `batch` of input and label strings. Assumes that input string
+    (label string) is stored in batch under the key `"orig"` (`"norm"`).
+
+    Function is inspired by `process_data_to_model_inputs` described here:
+    https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
+    """
+
+    # Tokenize the inputs and labels
+    inputs = tokenizer_input(
         batch["orig"],
         padding="max_length",
         truncation=True,
-        max_length=encoder_max_length,
+        max_length=max_length_input,
     )
-    outputs = tokenizer_bert(
+    outputs = tokenizer_output(
         batch["norm"],
         padding="max_length",
         truncation=True,
-        max_length=decoder_max_length,
+        max_length=max_length_output,
     )
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
     batch["labels"] = outputs.input_ids.copy()
 
-    # because BERT automatically shifts the labels, the labels correspond exactly to `decoder_input_ids`.
-    # We have to make sure that the PAD token is ignored
+    # Make sure that the PAD token is ignored
     batch["labels"] = [
-        [
-            -100 if token == tokenizer_bert.pad_token_id else token
-            for token in labels
-        ]
+        [-100 if token == tokenizer_output.pad_token_id else token for token in labels]
         for labels in batch["labels"]
     ]
 
     return batch
+
 
 # not used yet
 def train(
@@ -110,8 +115,12 @@ if __name__ == "__main__":
     print("Loading the data ...")
 
     # TODO: Should the path be hard-coded?
-    DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.0/xml"
-    dta_dataset = load_dtaevalxml_all(DATADIR, filter_classes=["BUG", "FM", "GRAPH"])
+    # DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.0/xml"
+    # dta_dataset = load_dtaevalxml_all(DATADIR, filter_classes=["BUG", "FM", "GRAPH"])
+    # DEBUG
+    from transnormer.data.loader import load_dtaeval_all
+    DATADIR = "/home/bracke/data/dta/dtaeval/split-v3.1/txt"
+    dta_dataset = load_dtaeval_all(DATADIR)
 
     # Create smaller datasets from random examples
     if "subset_sizes" in configs:
@@ -139,13 +148,18 @@ if __name__ == "__main__":
 
     tokenizer_bert = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 
-    # TODO: Maximum tokens for input and output; these values are picked randomly
-    encoder_max_length = 128
-    decoder_max_length = 128
+    tokenization_kwargs = {
+        "tokenizer_input": tokenizer_hmbert_custom, 
+        "tokenizer_output": tokenizer_bert,
+        # TODO: Maximum tokens for input and output; these values are picked randomly
+        "max_length_input": 128,
+        "max_length_output": 128,
+        }
 
     # Tokenize by applying a mapping
     prepared_dataset = dta_dataset.map(
-        process_data_to_model_inputs,
+        tokenize_input_and_output,
+        fn_kwargs=tokenization_kwargs,
         batched=True,
         batch_size=configs["training_hyperparams"]["batch_size"],
         remove_columns=["orig", "norm"],
