@@ -1,14 +1,9 @@
 from datetime import datetime
-import logging
 import os
 import random
 import time
 import tomli
-import tracemalloc
-from typing import Tuple
 
-# import codecarbon
-import datasets
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -104,11 +99,6 @@ if __name__ == "__main__":
     random.seed(CONFIGS["random_seed"])
     np.random.seed(CONFIGS["random_seed"])
     torch.manual_seed(CONFIGS["random_seed"])
-
-    # Start tracking time, memory, emissions
-    start_all = time.time()
-    tracemalloc.start()
-    # tracker.start()
 
     # GPU set-up
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
