@@ -1,0 +1,51 @@
+# -*- coding = utf-8 -*-
+
+# Select GPU
+gpu = "cuda:0" # when you did `export CUDA_VISIBLE_DEVICES=1` first
+
+# Random seed (fix for reproducibility)
+random_seed = 42
+
+# Data 
+[data]
+path = "./data/dta/dtaeval/split-v3.1/txt"
+
+# Data subsets sizes
+[subset_sizes]
+train = 100
+validation = 10
+test = 1
+
+[tokenizer]
+# path = "resources/tokenizer-wp-dta1600-1899"
+# padding = true
+# truncation = true
+max_length_input = 128 
+max_length_output = 128 
+
+# Model that is retrained
+[language_models]
+checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
+checkpoint_decoder = "bert-base-multilingual-cased"
+
+[training_hyperparams]
+batch_size = 10 
+epochs = 10
+# learning_rate = 0.0005
+eval_steps = 1000
+eval_strategy = "steps"
+save_steps = 10
+fp16 = true
+
+
+# Params for beam search decoding 
+# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/transformers/v4.10.1/main_classes/model.html
+# These initial parameters were copied from  
+# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
+[beam_search_decoding]
+no_repeat_ngram_size = 3
+early_stopping = true
+length_penalty = 2.0
+num_beams = 4
+
+
