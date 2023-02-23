@@ -9,7 +9,7 @@ import tomli
 def test_tokenize_input_and_output():
     
     # Load data
-    path = "./tests/testdata/txt/arnima_invalide_1818-head10.txt"
+    path = "./tests/testdata/dtaeval/txt/arnima_invalide_1818-head10.txt"
     dataset = load_dtaeval_as_dataset(path)
 
     # Load tokenizers
