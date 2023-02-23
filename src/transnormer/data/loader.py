@@ -40,7 +40,7 @@ def file_gen(path: str) -> Generator[TextIO, None, None]:
 
 
 def load_tsv_to_lists(
-    file_obj: TextIO, keep_sentences: bool = True
+    file: Union[str, TextIO], keep_sentences: bool = True
 ) -> Union[List[List[List[str]]], List[List[str]]]:
     """
     Load corpus file from a tab-separated (CONLL-like) plain text file into a
@@ -56,6 +56,10 @@ def load_tsv_to_lists(
     `List[List[str]]`. If False the entire column content is represented as a
     single list `List[str].
     """
+    if isinstance(file, str):
+        file_obj = open(file, "r", encoding="utf-8") 
+    else:
+        file_obj = file
 
     line = file_obj.readline()
     # Read upto first non-empty line
@@ -101,6 +105,9 @@ def load_tsv_to_lists(
         # Move on
         line = file_obj.readline()
         line_cnt += 1
+
+    # We're done, close file
+    file_obj.close() 
 
     # optional: flatten structure
     if not keep_sentences:

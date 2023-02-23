@@ -26,6 +26,25 @@ from transnormer.data.loader import load_dtaevalxml_to_lists, load_dtaevalxml_as
 #     dataset_dict = load_dtaeval_all()
 #     assert isinstance(dataset_dict, datasets.DatasetDict)
 
+def test_load_tsv_to_lists_filename():
+    path = "tests/testdata/dtaeval/txt/arnima_invalide_1818-head10.txt"
+    target = [
+        [["Auch", "im", "ſüdlichen", "Frankreich", "iſt", "es", "nicht", "immer", "warm", ","]],
+        [["Auch", "im", "südlichen", "Frankreich", "ist", "es", "nicht", "immer", "warm", ","]]
+    ]
+    doc = load_tsv_to_lists(path)
+    assert doc == target
+    pass
+
+def test_load_tsv_to_lists_opened_file():
+    path = "tests/testdata/dtaeval/txt/arnima_invalide_1818-head10.txt"
+    target = [
+        [["Auch", "im", "ſüdlichen", "Frankreich", "iſt", "es", "nicht", "immer", "warm", ","]],
+        [["Auch", "im", "südlichen", "Frankreich", "ist", "es", "nicht", "immer", "warm", ","]]
+    ]
+    with open(path, "r", encoding="utf-8") as f:
+        doc = load_tsv_to_lists(f)
+    assert doc == target
 
 def test_load_dtaevalxml_to_lists_no_additional_filter():
     path = "tests/testdata/xml/arnima_invalide_1818-mini.xml"
