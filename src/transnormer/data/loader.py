@@ -9,6 +9,8 @@ import datasets
 from lxml import etree
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 
+DETOKENIZER = TreebankWordDetokenizer()
+
 
 # Helper function
 def timer(func):
@@ -247,3 +249,8 @@ def filepath_gen(path: str) -> Generator[str, None, None]:
     else:
         for filename in glob.glob(path):
             yield filename
+
+
+def detokenize_doc(doc: Sequence[List[List[str]]]) -> List[List[str]]:
+    return [[DETOKENIZER.detokenize(sent) for sent in column] for column in doc]
+
