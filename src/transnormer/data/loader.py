@@ -2,6 +2,7 @@ from functools import wraps
 import itertools
 import glob
 import os
+import re
 import time
 from typing import Generator, TextIO, Union, List, Tuple, Dict, Sequence
 
@@ -254,3 +255,9 @@ def filepath_gen(path: str) -> Generator[str, None, None]:
 def detokenize_doc(doc: Sequence[List[List[str]]]) -> List[List[str]]:
     return [[DETOKENIZER.detokenize(sent) for sent in column] for column in doc]
 
+def extract_year(input_string: str) -> str:
+    match = re.search(r"\d\d\d\d", input_string)
+    if match:
+        return match.group(0)
+    else:
+        return ""

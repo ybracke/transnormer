@@ -101,3 +101,17 @@ def test_load_dtaevalxml_as_dataset_with_file_and_filter_classes_bug():
 #     dataset_dict = load_dtaevalxml_all(**kwargs)
 #     print(dataset_dict)
 #     assert isinstance(dataset_dict, datasets.DatasetDict)
+
+
+def test_extract_year_normal():
+    str = "/dev/brentano_kasperl_1838.xml"
+    assert extract_year(str) == "1838"
+
+
+def test_extract_year_noyear():
+    str = "/dev/brentano_kasperl.xml"
+    assert extract_year(str) == ''
+
+def test_extract_year_twoyears():
+    str = "/dev/brentano_kasperl_1838-1840.xml"
+    assert extract_year(str) == "1838"
