@@ -115,3 +115,31 @@ def test_extract_year_noyear():
 def test_extract_year_twoyears():
     str = "/dev/brentano_kasperl_1838-1840.xml"
     assert extract_year(str) == "1838"
+
+def test_read_dtaeval_raw_no_metadata():
+    path = "tests/testdata/dtaeval/xml/arnima_invalide_1818-head10.xml"
+    data = read_dtaeval_raw(path)
+    target_data = {
+        "orig" : ["Graf Dürande, der gute alte Kommandant von Marſeille,"], 
+        "norm" : ["Graf Dürande, der gute alte Kommandant von Marseille,"],
+    }
+    assert data == target_data
+
+def test_read_dtaeval_raw_with_metadata():
+    path = "tests/testdata/dtaeval/xml/arnima_invalide_1818-head10.xml"
+    data = read_dtaeval_raw(path, metadata=True)
+    target_data = {
+        "orig" : ["Graf Dürande, der gute alte Kommandant von Marſeille,"], 
+        "norm" : ["Graf Dürande, der gute alte Kommandant von Marseille,"],
+        "year" : ["1818"],
+        "document" : ["arnima_invalide_1818-head10"]}
+    assert data == target_data
+
+def test_read_ridges_raw():
+    path = "tests/testdata/ridges/ridges.train.head-10.txt"
+    data = read_ridges_raw(path)
+    target_data = {
+        "orig" : ["AN diſem fünfften ſtucke des puchs ſoͤll wir ſagen von den kreüteren vnd des erſten in eyner gemein"], 
+        "norm" : ["An diesem fünften Stück des Buchs sollen wir sagen von den Kräutern und des ersten in einer Gemein"],
+    }
+    assert data == target_data
