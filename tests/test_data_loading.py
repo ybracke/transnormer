@@ -1,5 +1,5 @@
 # import datasets
-from transnormer.data.loader import load_dtaevalxml_to_lists, load_dtaevalxml_as_dataset
+from transnormer.data.loader import *
 
 # def test_load_dtaeval_as_dataset_with_file():
 #     path = "tests/testdata/dtaeval/txt/arnima_invalide_1818-mini.txt"
@@ -149,3 +149,16 @@ def test_read_leipzig_raw():
     d = read_leipzig_raw(path)
     print(len(d["orig"]))
 
+def test_load_data():
+    paths = ["tests/testdata/dtaeval/xml"]
+    for i, (dname, split, o) in enumerate(load_data(paths)):
+        if i == 0:
+            assert dname == "dtaeval"
+            assert split == "test"
+            assert all(map(lambda x: x in o, ["orig", "norm", "year", "document"]))
+            assert len(o["orig"]) > 0
+            assert len(o["orig"]) == len(o["norm"])
+
+# def test_main():
+#     paths = ["tests/testdata/dtaeval/xml"]
+#     main(paths)

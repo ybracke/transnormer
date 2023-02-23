@@ -263,6 +263,66 @@ def extract_year(input_string: str) -> str:
         return ""
 
 
+def _find_split(input_string: str) -> str:
+    if "train" in input_string:
+        split = "train"
+    elif ("dev" in input_string) or ("validation" in input_string):
+        split = "validation"
+    elif "test" in input_string:
+        split = "test"
+    # dataset has not been split
+    else:
+        split = ""
+    return split
+
+
+def load_data(
+    paths: str,
+) -> Generator[Tuple[str, str, Dict[str, List[str]]], None, None]:
+    """
+    Generator that returns the name of a dataset, the split, and the actual data
+
+    `data` is a dict object that looks like this:
+    { "orig" : [...], "norm" : [...], + optional metadata }
+
+    Function inspired by: `https://github.com/zentrum-lexikographie/eval-de-pos/blob/main/src/loader.py`
+    """
+
+    # default outputs
+    dname = ""
+    split = ""
+    o: Dict[str, List[str]] = {"orig": [], "norm": []}
+
+    for path in paths:
+        # Call read_ function depending on dataset
+        if "dtaeval" in path:
+            # TODO|s
+            # - Is the match check for the dataset path/name okay like this?
+            # - Same question for _find_split
+            # - Where/how do the filter_kwargs get passed for filtering certain XML elements
+            filter_kwargs: Dict[str, Union[str, List[str]]] = {}
+            o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
+            dname = "dtaeval"
+            split = _find_split(path)
+
+        elif "ridges/bollmann-split" in path:
+            o = read_ridges_raw(path)
+            dname = "ridges_bollmann"
+            split = _find_split(path)
+
+        elif "germanc" in path:
+            pass
+            # o = read_germanc_raw(path, metadata=True)
+            # dname = "germanc_gs"
+            # split = _find_split(path)
+
+        elif "deu_news_2020" in path:
+            o = read_leipzig_raw(path)
+            dname = "deu_news_2020"
+            split = _find_split(path)
+
+        yield (dname, split, o)
+
 
 def read_dtaeval_raw(
     path: str, metadata=False, **filter_kwargs
