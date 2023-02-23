@@ -261,3 +261,42 @@ def extract_year(input_string: str) -> str:
         return match.group(0)
     else:
         return ""
+
+
+
+def read_dtaeval_raw(
+    path: str, metadata=False, **filter_kwargs
+) -> Dict[str, List[str]]:
+    """
+    Read in DTAEval corpus part and return it as a Dict
+
+    Returns: {"orig" : [...], "norm" : [...], + optional metadata }
+    """
+    all_sents_orig, all_sents_norm = [], []
+    if metadata:
+        all_years, all_docs = [], []
+    for docpath in filepath_gen(path):
+        # Load document into a list of tokenized sentences
+        # The two elements in the outermost list are orig and norm columns
+        doc_tok = load_dtaevalxml_to_lists(docpath, **filter_kwargs)
+        # Sentences: List[str] -> str
+        doc = detokenize_doc(doc_tok)
+        # Collect all sentences in list
+        all_sents_orig.extend([sent for sent in doc[0]])
+        all_sents_norm.extend([sent for sent in doc[1]])
+        if metadata:
+            basename = os.path.splitext(os.path.basename(docpath))[0]
+            year = extract_year(basename)
+            all_years.extend([year for i in range(len(doc[0]))])
+            all_docs.extend([basename for i in range(len(doc[0]))])
+
+    if metadata:
+        return {
+            "orig": all_sents_orig,
+            "norm": all_sents_norm,
+            "year": all_years,
+            "document": all_docs,
+        }
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
+
