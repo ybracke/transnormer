@@ -235,3 +235,15 @@ def load_dtaeval_as_dataset(path: str) -> datasets.Dataset:
         all_sents_norm.extend([sent for sent in doc_norm])
 
     return datasets.Dataset.from_dict({"orig": all_sents_orig, "norm": all_sents_norm})
+
+
+def filepath_gen(path: str) -> Generator[str, None, None]:
+    """Yields filepath(s) from a path, where path can be file, dir or glob"""
+    if os.path.isfile(path):
+        yield path
+    elif os.path.isdir(path):
+        for filename in os.listdir(path):
+            yield os.path.join(path, filename)
+    else:
+        for filename in glob.glob(path):
+            yield filename
