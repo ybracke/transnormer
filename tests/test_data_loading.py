@@ -143,3 +143,9 @@ def test_read_ridges_raw():
         "norm" : ["An diesem fünften Stück des Buchs sollen wir sagen von den Kräutern und des ersten in einer Gemein"],
     }
     assert data == target_data
+
+def test_read_leipzig_raw():
+    path = "/home/bracke/code/transnormer/data/raw/leipzig-corpora/deu_news_2020_1M-sentences.txt"
+    d = read_leipzig_raw(path)
+    print(len(d["orig"]))
+

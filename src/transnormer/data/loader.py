@@ -323,3 +323,29 @@ def read_ridges_raw(path: str) -> Dict[str, List[str]]:
         all_sents_norm.extend([sent for sent in doc[1]])
 
     return {"orig": all_sents_orig, "norm": all_sents_norm}
+
+
+def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
+    """
+    Read in Leipzig Corpora Collection file(s) and return it as a Dict
+
+    Download here: https://wortschatz.uni-leipzig.de/de/download
+    This has no metadata.
+    This is standard modern German, so "norm" is just a copy of "orig".
+
+    Returns: {"orig" : [...], "norm" : [...]}
+
+    """
+    all_sents = []
+    for docpath in filepath_gen(path):
+        # Load document
+        with open(docpath, "r", encoding="utf-8") as f:
+            doc = f.readlines()
+        # Collect all sentences in list
+        all_sents.extend(doc)
+
+    return {"orig": all_sents, "norm": all_sents}
+
+
+# def read_germanc_raw(path: str) -> Dict[str, List[str]]:
+#     return
