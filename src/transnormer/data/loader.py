@@ -300,3 +300,26 @@ def read_dtaeval_raw(
 
     return {"orig": all_sents_orig, "norm": all_sents_norm}
 
+
+def read_ridges_raw(path: str) -> Dict[str, List[str]]:
+    """
+    Read in RIDGES corpus part and return it as a Dict
+
+    This is for the version of RIDGES corpus provided by Marcel Bollmann:
+    https://github.com/coastalcph/histnorm/tree/master/datasets/historical/german
+    This version has no metadata attached.
+
+    Returns: {"orig" : [...], "norm" : [...]}
+    """
+    all_sents_orig, all_sents_norm = [], []
+    for docpath in filepath_gen(path):
+        # Load document into a list of tokenized sentences
+        # The two elements in the outermost list are orig and norm columns
+        doc_tok = load_tsv_to_lists(docpath, keep_sentences=True)
+        # Sentences are converted from List[str] to str
+        doc = detokenize_doc(doc_tok)
+        # Collect all sentences in list
+        all_sents_orig.extend([sent for sent in doc[0]])
+        all_sents_norm.extend([sent for sent in doc[1]])
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
