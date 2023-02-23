@@ -3,7 +3,7 @@ import itertools
 import glob
 import os
 import time
-from typing import Generator, TextIO, Union, List, Tuple
+from typing import Generator, TextIO, Union, List, Tuple, Dict, Sequence
 
 import datasets
 from lxml import etree
@@ -57,7 +57,7 @@ def load_tsv_to_lists(
     single list `List[str].
     """
     if isinstance(file, str):
-        file_obj = open(file, "r", encoding="utf-8") 
+        file_obj: TextIO = open(file, "r", encoding="utf-8")
     else:
         file_obj = file
 
@@ -107,7 +107,7 @@ def load_tsv_to_lists(
         line_cnt += 1
 
     # We're done, close file
-    file_obj.close() 
+    file_obj.close()
 
     # optional: flatten structure
     if not keep_sentences:
@@ -202,7 +202,6 @@ def load_dtaevalxml_all(datadir, **kwargs) -> datasets.DatasetDict:
     ds["test"] = load_dtaevalxml_as_dataset(test_path, **kwargs)
 
     return ds
-
 
 
 @timer
