@@ -2,12 +2,15 @@ from functools import wraps
 import itertools
 import glob
 import os
+import re
 import time
-from typing import Generator, TextIO, Union, List, Tuple
+from typing import Generator, TextIO, Union, List, Tuple, Dict, Sequence
 
 import datasets
 from lxml import etree
 from nltk.tokenize.treebank import TreebankWordDetokenizer
+
+DETOKENIZER = TreebankWordDetokenizer()
 
 
 # Helper function
@@ -40,7 +43,7 @@ def file_gen(path: str) -> Generator[TextIO, None, None]:
 
 
 def load_tsv_to_lists(
-    file_obj: TextIO, keep_sentences: bool = True
+    file: Union[str, TextIO], keep_sentences: bool = True
 ) -> Union[List[List[List[str]]], List[List[str]]]:
     """
     Load corpus file from a tab-separated (CONLL-like) plain text file into a
@@ -56,6 +59,10 @@ def load_tsv_to_lists(
     `List[List[str]]`. If False the entire column content is represented as a
     single list `List[str].
     """
+    if isinstance(file, str):
+        file_obj: TextIO = open(file, "r", encoding="utf-8")
+    else:
+        file_obj = file
 
     line = file_obj.readline()
     # Read upto first non-empty line
@@ -101,6 +108,9 @@ def load_tsv_to_lists(
         # Move on
         line = file_obj.readline()
         line_cnt += 1
+
+    # We're done, close file
+    file_obj.close()
 
     # optional: flatten structure
     if not keep_sentences:
@@ -197,7 +207,6 @@ def load_dtaevalxml_all(datadir, **kwargs) -> datasets.DatasetDict:
     return ds
 
 
-
 @timer
 def load_dtaeval_all(datadir) -> datasets.DatasetDict:
     train_path = os.path.join(datadir, "train")
@@ -229,3 +238,189 @@ def load_dtaeval_as_dataset(path: str) -> datasets.Dataset:
         all_sents_norm.extend([sent for sent in doc_norm])
 
     return datasets.Dataset.from_dict({"orig": all_sents_orig, "norm": all_sents_norm})
+
+
+def filepath_gen(path: str) -> Generator[str, None, None]:
+    """Yields filepath(s) from a path, where path can be file, dir or glob"""
+    if os.path.isfile(path):
+        yield path
+    elif os.path.isdir(path):
+        for filename in os.listdir(path):
+            yield os.path.join(path, filename)
+    else:
+        for filename in glob.glob(path):
+            yield filename
+
+
+def detokenize_doc(doc: Sequence[List[List[str]]]) -> List[List[str]]:
+    """Performs detokenization (List[str] -> str) on all sentences in a multi-column doc"""
+    return [[DETOKENIZER.detokenize(sent) for sent in column] for column in doc]
+
+
+def extract_year(input_string: str) -> str:
+    """
+    Extracts the first four consecutive digits from a string
+    (or an empty string if there is no match)
+
+    In our scenario, this should get us the publication year from a filename
+    """
+    match = re.search(r"\d\d\d\d", input_string)
+    if match:
+        return match.group(0)
+    else:
+        return ""
+
+
+def _find_split(input_string: str) -> str:
+    """
+    Return train|validation|test|{empty string} depending on the input
+
+    In our scenario, the input should be a file or directory path
+    """
+    if "train" in input_string:
+        split = "train"
+    elif ("dev" in input_string) or ("validation" in input_string):
+        split = "validation"
+    elif "test" in input_string:
+        split = "test"
+    # dataset has not been split
+    else:
+        split = ""
+    return split
+
+
+def load_data(
+    paths: str,
+) -> Generator[Tuple[str, str, Dict[str, List[str]]], None, None]:
+    """
+    Generator that returns the name of a dataset, the split, and the actual data
+
+    `data` is a dict as returned by a `read_*` function, which looks like this:
+    { "orig" : [...], "norm" : [...], + optional metadata }
+
+    Function is inspired by:
+    `https://github.com/zentrum-lexikographie/eval-de-pos/blob/main/src/loader.py`
+    """
+
+    # default outputs
+    dname = ""
+    split = ""
+    o: Dict[str, List[str]] = {"orig": [], "norm": []}
+
+    for path in paths:
+        # Call read_ function depending on dataset
+        if "dtaeval" in path:
+            # TODO|s
+            # - Is the match check for the dataset path/name okay like this?
+            # - Same question for _find_split
+            # - Where/how do the filter_kwargs get passed for filtering certain XML elements
+            filter_kwargs: Dict[str, Union[str, List[str]]] = {}
+            o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
+            dname = "dtaeval"
+            split = _find_split(path)
+
+        elif "ridges/bollmann-split" in path:
+            o = read_ridges_raw(path)
+            dname = "ridges_bollmann"
+            split = _find_split(path)
+
+        elif "germanc" in path:
+            pass
+            # o = read_germanc_raw(path, metadata=True)
+            # dname = "germanc_gs"
+            # split = _find_split(path)
+
+        elif "deu_news_2020" in path:
+            o = read_leipzig_raw(path)
+            dname = "deu_news_2020"
+            split = _find_split(path)
+
+        yield (dname, split, o)
+
+
+def read_dtaeval_raw(
+    path: str, metadata=False, **filter_kwargs
+) -> Dict[str, List[str]]:
+    """
+    Read in a part of DTA EvalCorpus (XML version) and return it as a dict
+
+    Returns: {"orig" : [...], "norm" : [...], + optional metadata }
+    """
+    all_sents_orig, all_sents_norm = [], []
+    if metadata:
+        all_years, all_docs = [], []
+    for docpath in filepath_gen(path):
+        # Load document into a list of tokenized sentences
+        # The two elements in the outermost list are orig and norm columns
+        doc_tok = load_dtaevalxml_to_lists(docpath, **filter_kwargs)
+        # Sentences: List[str] -> str
+        doc = detokenize_doc(doc_tok)
+        # Collect all sentences in list
+        all_sents_orig.extend([sent for sent in doc[0]])
+        all_sents_norm.extend([sent for sent in doc[1]])
+        if metadata:
+            basename = os.path.splitext(os.path.basename(docpath))[0]
+            year = extract_year(basename)
+            all_years.extend([year for i in range(len(doc[0]))])
+            all_docs.extend([basename for i in range(len(doc[0]))])
+
+    if metadata:
+        return {
+            "orig": all_sents_orig,
+            "norm": all_sents_norm,
+            "year": all_years,
+            "document": all_docs,
+        }
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
+
+
+def read_ridges_raw(path: str) -> Dict[str, List[str]]:
+    """
+    Read in a part of the RIDGES Corpus (plain text version) and return it as a dict
+
+    This is for the plain text (tsv) version of RIDGES corpus provided by Marcel Bollmann:
+    https://github.com/coastalcph/histnorm/tree/master/datasets/historical/german
+    There is no metadata available for this corpus version.
+
+    Returns: {"orig" : [...], "norm" : [...]}
+    """
+    all_sents_orig, all_sents_norm = [], []
+    for docpath in filepath_gen(path):
+        # Load document into a list of tokenized sentences
+        # The two elements in the outermost list are orig and norm columns
+        doc_tok = load_tsv_to_lists(docpath, keep_sentences=True)
+        # Sentences are converted from List[str] to str
+        doc = detokenize_doc(doc_tok)
+        # Collect all sentences in list
+        all_sents_orig.extend([sent for sent in doc[0]])
+        all_sents_norm.extend([sent for sent in doc[1]])
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
+
+
+def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
+    """
+    Read in Leipzig Corpora Collection file(s) and return it as a dict
+
+    Files are plain text and can be downloaded here:
+    https://wortschatz.uni-leipzig.de/de/download
+    There is no metadata available for this corpus.
+    The texts are already in standard modern German, so "norm" is
+    just a copy of "orig".
+
+    Returns: {"orig" : [...], "norm" : [...]}
+    """
+    all_sents = []
+    for docpath in filepath_gen(path):
+        # Load document
+        with open(docpath, "r", encoding="utf-8") as f:
+            doc = f.readlines()
+        # Collect all sentences in list
+        all_sents.extend(doc)
+
+    return {"orig": all_sents, "norm": all_sents}
+
+
+# def read_germanc_raw(path: str) -> Dict[str, List[str]]:
+#     return
