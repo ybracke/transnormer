@@ -290,7 +290,7 @@ def _find_split(input_string: str) -> str:
 
 
 def load_data(
-    paths: str,
+    paths: List[str],
 ) -> Generator[Tuple[str, str, Dict[str, List[str]]], None, None]:
     """
     Generator that returns the name of a dataset, the split, and the actual data
