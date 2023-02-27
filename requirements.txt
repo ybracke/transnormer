@@ -6,4 +6,3 @@ transformers==4.26.0
 datasets==2.8.0
 matplotlib==3.6.3
 tomli==2.0.1
-python-dotenv>=0.5.1
