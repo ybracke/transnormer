@@ -253,9 +253,17 @@ def filepath_gen(path: str) -> Generator[str, None, None]:
 
 
 def detokenize_doc(doc: Sequence[List[List[str]]]) -> List[List[str]]:
+    """Performs detokenization (List[str] -> str) on all sentences in a multi-column doc"""
     return [[DETOKENIZER.detokenize(sent) for sent in column] for column in doc]
 
+
 def extract_year(input_string: str) -> str:
+    """
+    Extracts the first four consecutive digits from a string
+    (or an empty string if there is no match)
+
+    In our scenario, this should get us the publication year from a filename
+    """
     match = re.search(r"\d\d\d\d", input_string)
     if match:
         return match.group(0)
@@ -264,6 +272,11 @@ def extract_year(input_string: str) -> str:
 
 
 def _find_split(input_string: str) -> str:
+    """
+    Return train|validation|test|{empty string} depending on the input
+
+    In our scenario, the input should be a file or directory path
+    """
     if "train" in input_string:
         split = "train"
     elif ("dev" in input_string) or ("validation" in input_string):
@@ -282,10 +295,11 @@ def load_data(
     """
     Generator that returns the name of a dataset, the split, and the actual data
 
-    `data` is a dict object that looks like this:
+    `data` is a dict as returned by a `read_*` function, which looks like this:
     { "orig" : [...], "norm" : [...], + optional metadata }
 
-    Function inspired by: `https://github.com/zentrum-lexikographie/eval-de-pos/blob/main/src/loader.py`
+    Function is inspired by:
+    `https://github.com/zentrum-lexikographie/eval-de-pos/blob/main/src/loader.py`
     """
 
     # default outputs
@@ -328,7 +342,7 @@ def read_dtaeval_raw(
     path: str, metadata=False, **filter_kwargs
 ) -> Dict[str, List[str]]:
     """
-    Read in DTAEval corpus part and return it as a Dict
+    Read in a part of DTA EvalCorpus (XML version) and return it as a dict
 
     Returns: {"orig" : [...], "norm" : [...], + optional metadata }
     """
@@ -363,11 +377,11 @@ def read_dtaeval_raw(
 
 def read_ridges_raw(path: str) -> Dict[str, List[str]]:
     """
-    Read in RIDGES corpus part and return it as a Dict
+    Read in a part of the RIDGES Corpus (plain text version) and return it as a dict
 
-    This is for the version of RIDGES corpus provided by Marcel Bollmann:
+    This is for the plain text (tsv) version of RIDGES corpus provided by Marcel Bollmann:
     https://github.com/coastalcph/histnorm/tree/master/datasets/historical/german
-    This version has no metadata attached.
+    There is no metadata available for this corpus version.
 
     Returns: {"orig" : [...], "norm" : [...]}
     """
@@ -387,14 +401,15 @@ def read_ridges_raw(path: str) -> Dict[str, List[str]]:
 
 def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
     """
-    Read in Leipzig Corpora Collection file(s) and return it as a Dict
+    Read in Leipzig Corpora Collection file(s) and return it as a dict
 
-    Download here: https://wortschatz.uni-leipzig.de/de/download
-    This has no metadata.
-    This is standard modern German, so "norm" is just a copy of "orig".
+    Files are plain text and can be downloaded here:
+    https://wortschatz.uni-leipzig.de/de/download
+    There is no metadata available for this corpus.
+    The texts are already in standard modern German, so "norm" is
+    just a copy of "orig".
 
     Returns: {"orig" : [...], "norm" : [...]}
-
     """
     all_sents = []
     for docpath in filepath_gen(path):
