@@ -4,6 +4,7 @@ import random
 import time
 import tomli
 
+import datasets
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -13,7 +14,7 @@ from transformers import AutoTokenizer
 from tokenizers.normalizers import Normalizer
 from tokenizers import NormalizedString
 
-from transnormer.data.loader import load_dtaevalxml_all, load_dtaeval_all
+from transnormer.data import loader
 
 
 def tokenize_input_and_output(
@@ -108,21 +109,38 @@ if __name__ == "__main__":
 
     print("Loading the data ...")
 
-    # FIXME: currently one has to edit to get the right loading function depending on
-    # input data; this should be handled in data.loader somehow
-    # dta_dataset = load_dtaevalxml_all(CONFIGS["data"]["path"], filter_classes=["BUG", "FM", "GRAPH"])
-    dta_dataset = load_dtaeval_all(CONFIGS["data"]["path"])
+    splits_and_paths = [
+        ("train", CONFIGS["data"]["paths_train"]),
+        ("validation", CONFIGS["data"]["paths_validation"]),
+        ("test", CONFIGS["data"]["paths_test"]),
+    ]
+    ds_split_merged = datasets.DatasetDict()
+    # Iterate over splits (i.e. train, validation, test)
+    for split, paths in splits_and_paths:
+        # Load all datasets for this split
+        dsets = [
+            datasets.load_dataset("json", data_files=path, split="train")
+            for path in paths
+        ]
+        # Map each dataset to the desired number of examples for this dataset
+        num_examples = CONFIGS["data"][f"n_examples_{split}"]
+        ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
+        # Merge and resample datasets for this split
+        ds = loader.merge_datasets(ds2num_examples, seed=CONFIGS["random_seed"])
+        ds_split_merged[split] = ds
+
+    dataset = ds_split_merged
 
     # Create smaller datasets from random examples
     if "subset_sizes" in CONFIGS:
         train_size = CONFIGS["subset_sizes"]["train"]
         validation_size = CONFIGS["subset_sizes"]["validation"]
         test_size = CONFIGS["subset_sizes"]["test"]
-        dta_dataset["train"] = dta_dataset["train"].shuffle().select(range(train_size))
-        dta_dataset["validation"] = (
-            dta_dataset["validation"].shuffle().select(range(validation_size))
+        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
+        dataset["validation"] = (
+            dataset["validation"].shuffle().select(range(validation_size))
         )
-        dta_dataset["test"] = dta_dataset["test"].shuffle().select(range(test_size))
+        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
 
     # (3) Tokenize data
 
@@ -148,7 +166,7 @@ if __name__ == "__main__":
     }
 
     # Tokenize by applying a mapping
-    prepared_dataset = dta_dataset.map(
+    prepared_dataset = dataset.map(
         tokenize_input_and_output,
         fn_kwargs=tokenization_kwargs,
         remove_columns=["orig", "norm"],
