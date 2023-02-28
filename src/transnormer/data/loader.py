@@ -424,3 +424,32 @@ def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
 
 # def read_germanc_raw(path: str) -> Dict[str, List[str]]:
 #     return
+
+
+def merge_datasets(
+    dsets: Union[List[datasets.Dataset], Dict[datasets.Dataset, int]], seed: int
+) -> datasets.Dataset:
+    """
+    Merge multiple datasets into a single dataset with optional resampling.
+
+    If a list is passed as the argument, the datasets are concatenated. If a
+    dict is passed the keys are taken to be datasets and the values are taken to
+    be the desired number of samples for that dataset. Before concatenating
+    datasets are pruned to that number of samples.
+    If one of the passed values exceeds the `.num_rows` of the respective dataset,
+    n is set to equal `.num_rows`.
+    """
+    if isinstance(dsets, list):
+        merged_dataset = datasets.concatenate_datasets(dsets)
+    elif isinstance(dsets, dict):
+        dsets_resampled = []
+        for ds, n in dsets.items():
+            # Catch `n`s that exceed number of rows
+            if n > ds.num_rows:
+                n = ds.num_rows
+            # Shuffle and resample
+            dsets_resampled.append(ds.shuffle(seed=seed).select(range(n)))
+        merged_dataset = datasets.concatenate_datasets(dsets_resampled)
+    else:
+        raise TypeError("Argument `dsets` must be of type list or dict.")
+    return merged_dataset

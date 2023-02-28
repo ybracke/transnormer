@@ -1,4 +1,4 @@
-# import datasets
+import datasets
 from transnormer.data import loader
 
 # def test_load_dtaeval_as_dataset_with_file():
@@ -122,7 +122,9 @@ def test_load_dtaevalxml_to_lists_filter_bad():
 
 def test_load_dtaevalxml_to_lists_filter_classes_bug():
     path = "tests/testdata/dtaeval/xml/arnima_invalide_1818-mini.xml"
-    old, new = loader.load_dtaevalxml_to_lists(path, filter_bad=False, filter_classes=["BUG"])
+    old, new = loader.load_dtaevalxml_to_lists(
+        path, filter_bad=False, filter_classes=["BUG"]
+    )
     assert len(old) == 4
     assert len(new) == 4
     assert len(old[3]) == 14
@@ -226,6 +228,23 @@ def test_load_data():
             assert len(o["orig"]) == len(o["norm"])
 
 
-# def test_main():
-#     paths = ["tests/testdata/dtaeval/xml"]
-#     main(paths)
+def test_merge_datasets():
+    seed = 42
+    path_ds1 = "tests/testdata/dtaeval/xml/arnima_invalide_1818-head10.xml"
+    path_ds2 = "tests/testdata/ridges/ridges.train.head-10.txt"
+    ds1 = datasets.Dataset.from_dict(loader.read_dtaeval_raw(path_ds1))
+    ds2 = datasets.Dataset.from_dict(loader.read_ridges_raw(path_ds2))
+    # Create a version of ds1 with 4 texts (by concatenating it with itself)
+    ds1 = datasets.concatenate_datasets([ds1] * 4)
+    # Similar for ds2
+    ds2 = datasets.concatenate_datasets([ds2] * 4)
+    # Get a proportion of 4:1 in the final set
+    ds = loader.merge_datasets({ds1: 4, ds2: 1}, seed=seed)
+    assert ds.num_rows == 5
+    # This still gets a proportion of 4:1 in the final set
+    ds = loader.merge_datasets({ds1: 1000, ds2: 1}, seed=seed)
+    assert ds.num_rows == 5
+    # This still gets a proportion of 1:1 (or whatever the original proportion
+    # of the datasets is) in the final set
+    ds = loader.merge_datasets([ds1, ds2], seed=seed)
+    assert ds.num_rows == 8
