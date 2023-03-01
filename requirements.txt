@@ -2,7 +2,8 @@
 -e .
 
 # external requirements
-transformers==4.26.0
 datasets==2.8.0
+lxml==4.9.2
 matplotlib==3.6.3
 tomli==2.0.1
+transformers==4.26.0

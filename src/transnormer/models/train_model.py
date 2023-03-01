@@ -86,14 +86,15 @@ class CustomNormalizer:
 # TODO pass this on the command-line
 ROOT = "/home/bracke/code/transnormer"
 CONFIGFILE = os.path.join(ROOT, "training_config.toml")
-# Load configs
-with open(CONFIGFILE, mode="rb") as fp:
-    CONFIGS = tomli.load(fp)
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-MODELDIR=os.path.join(ROOT, f"./models/models_{timestamp}")
+
 
 if __name__ == "__main__":
     # (1) Preparations
+    # Load configs
+    with open(CONFIGFILE, mode="rb") as fp:
+        CONFIGS = tomli.load(fp)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    MODELDIR = os.path.join(ROOT, f"./models/models_{timestamp}")
 
     # Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
@@ -118,7 +119,9 @@ if __name__ == "__main__":
         validation_size = CONFIGS["subset_sizes"]["validation"]
         test_size = CONFIGS["subset_sizes"]["test"]
         dta_dataset["train"] = dta_dataset["train"].shuffle().select(range(train_size))
-        dta_dataset["validation"] = dta_dataset["validation"].shuffle().select(range(validation_size))
+        dta_dataset["validation"] = (
+            dta_dataset["validation"].shuffle().select(range(validation_size))
+        )
         dta_dataset["test"] = dta_dataset["test"].shuffle().select(range(test_size))
 
     # (3) Tokenize data
@@ -132,7 +135,9 @@ if __name__ == "__main__":
     )
     tokenizer_input.backend_tokenizer.normalizer = Normalizer.custom(CustomNormalizer())
 
-    tokenizer_output = AutoTokenizer.from_pretrained(CONFIGS["language_models"]["checkpoint_decoder"])
+    tokenizer_output = AutoTokenizer.from_pretrained(
+        CONFIGS["language_models"]["checkpoint_decoder"]
+    )
 
     tokenization_kwargs = {
         # FIXME: it is unclear how/if a custom tokenizer can be passed as a parameter
@@ -177,7 +182,9 @@ if __name__ == "__main__":
 
     # Params for beam search decoding
     model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
-    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"]["no_repeat_ngram_size"]
+    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"][
+        "no_repeat_ngram_size"
+    ]
     model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
     model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
     model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
@@ -186,7 +193,6 @@ if __name__ == "__main__":
 
     print("Training ...")
 
-    
     training_args = transformers.Seq2SeqTrainingArguments(
         output_dir=MODELDIR,
         predict_with_generate=True,
@@ -214,8 +220,8 @@ if __name__ == "__main__":
 
     # (6) Saving the final model
 
-    model_path = os.path.join(MODELDIR,"model_final/")
+    model_path = os.path.join(MODELDIR, "model_final/")
     model.save_pretrained(model_path)
-    ## this fails because a custom tokenizer can't be saved
+    # this fails because a custom tokenizer can't be saved
     # model_path = f"./models/model_fromtrainer/"
     # trainer.save_model(model_path)
