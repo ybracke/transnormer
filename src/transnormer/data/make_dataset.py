@@ -57,5 +57,6 @@ def main(arguments: Optional[List[str]] = None) -> None:
     args = parse_arguments(arguments)
     save_to_jsonl(args.DATASET, args.target)
 
+
 if __name__ == "__main__":
     main()
