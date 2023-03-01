@@ -9,6 +9,6 @@ def test_get_spans_of_unknown_tokens():
     target_spans = [(5, 13), (34, 41)]
     target_unk_toks = ["ſentence", "ſymbols"]
     actual_spans = analysis.get_spans_of_unknown_tokens(text, tokenizer)
-    actual_unk_toks = [text[i:j] for (i,j) in actual_spans]
+    actual_unk_toks = [text[i:j] for (i, j) in actual_spans]
     assert target_spans == actual_spans
     assert target_unk_toks == actual_unk_toks
