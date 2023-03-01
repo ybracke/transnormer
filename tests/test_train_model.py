@@ -39,12 +39,35 @@ def test_tokenize_input_and_output():
     assert len(prepared_dataset[0]["labels"]) == 128
 
 
-def test_parameter_loading():
+def test_config_file_structure():
     target_param_dict = {
         "gpu": "cuda:0",
         "random_seed": 42,
         "data": {
-            "path": "./data/dta/dtaeval/split-v3.1/txt",
+            "paths_train": [
+                "data/interim/dtaeval/dtaeval-train.jsonl",
+                "data/interim/deu_news_2020/deu_news_2020-train.jsonl",
+            ],
+            "paths_validation": [
+                "data/interim/dtaeval/dtaeval-validation.jsonl",
+                "data/interim/deu_news_2020/deu_news_2020-validation.jsonl",
+            ],
+            "paths_test": [
+                "data/interim/dtaeval/dtaeval-test.jsonl",
+                "data/interim/deu_news_2020/deu_news_2020-test.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000_000,
+                50_000,
+            ],
+            "n_examples_validation": [
+                1_000_000_000,
+                5_000,
+            ],
+            "n_examples_test": [
+                1_000_000_000,
+                5_000,
+            ],
         },
         "subset_sizes": {"train": 100, "validation": 10, "test": 1},
         "tokenizer": {
