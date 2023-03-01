@@ -1,34 +1,61 @@
 # -*- coding: utf-8 -*-
+import argparse
+import os
+from typing import Optional, List
 
-# Original code
-'''
-import click
-import logging
-from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+import datasets
+
+from transnormer.data.loader import load_data
+
+"""
+usage: make_dataset.py [-h] [-t TARGET] DATASET [DATASET ...]
+
+Example call:
+python3 src/transnormer/data/make_dataset.py \
+    data/raw/ridges/bollmann-split/ridges.dev.txt \
+    data/raw/ridges/bollmann-split/ridges.test.txt \
+    data/raw/ridges/bollmann-split/ridges.train.txt \
+    data/raw/dta/dtaeval/split-v3.0/xml/dev \
+    data/raw/dta/dtaeval/split-v3.0/xml/test \
+    data/raw/dta/dtaeval/split-v3.0/xml/train \
+    data/raw/leipzig-corpora/deu_news_2020_1M-sentences.txt \
+    --target data/interim
+"""
 
 
-@click.command()
-@click.argument('input_filepath', type=click.Path(exists=True))
-@click.argument('output_filepath', type=click.Path())
-def main(input_filepath, output_filepath):
-    """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
+def save_to_jsonl(paths: List[str], parent_dir: str) -> None:
     """
-    logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
+    Store all datasets (or dataset splits) in `paths` in JSON Lines format
+    under `target_dir`
+    """
+    for name, split, data in load_data(paths):
+        ds = datasets.Dataset.from_dict(data)
+        target_dir = os.path.join(parent_dir, name)
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+        if split:
+            target_file = os.path.join(target_dir, f"{name}-{split}.jsonl")
+        else:
+            target_file = os.path.join(target_dir, f"{name}.jsonl")
+        # Note: non-ASCII chars are escaped with method ".to_json"
+        ds.to_json(target_file)
 
 
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+def parse_arguments(arguments: Optional[List[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Convert datasets from raw format to JSON Lines"
+    )
+    parser.add_argument("DATASET", nargs="+", help="Path(s) to dataset(s)")
+    parser.add_argument(
+        "-t", "--target", default="./data/interim", help="Path to target directory"
+    )
 
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
+    return parser.parse_args(arguments)
 
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
 
+def main(arguments: Optional[List[str]] = None) -> None:
+    args = parse_arguments(arguments)
+    save_to_jsonl(args.DATASET, args.target)
+
+if __name__ == "__main__":
     main()
-'''
