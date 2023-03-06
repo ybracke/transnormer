@@ -92,4 +92,7 @@ target/
 temp/
 
 # Don't track the models
-./models/
+models/*
+
+# Don't track the training configuration file
+training_config.toml
