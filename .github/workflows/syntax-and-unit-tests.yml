@@ -1,0 +1,43 @@
+name: Python application
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.9']
+    
+    name: Python ${{ matrix.python-version }} Tests
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup python
+      # https://github.com/marketplace/actions/setup-python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: x64
+
+    - name: Install dependencies
+      # `torch` is not in requirements because when using a GPU you have to
+      # install it separately using conda (see `README`)
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch==1.12.1
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install pytest
+        pip install . 
+
+    - name: Lint with flake8
+      run: |
+        flake8 --ignore=E501,F401
+    
+    - name: Unit Test with pytest
+      run: |
+        pytest 
