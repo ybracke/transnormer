@@ -1,6 +1,7 @@
 from functools import wraps
 import itertools
 import glob
+import json
 import os
 import re
 import time
@@ -335,6 +336,12 @@ def load_data(
             dname = "deu_news_2020"
             split = _find_split(path)
 
+        elif "dtak" in path:
+            o = read_dtajsonl_raw(path)
+            match = re.search(r"dtak-\d\d\d\d-\d\d\d\d", path)
+            dname = match.group(0) if match else "dtak"
+            split = _find_split(path)
+
         yield (dname, split, o)
 
 
@@ -420,6 +427,40 @@ def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
         all_sents.extend(doc)
 
     return {"orig": all_sents, "norm": all_sents}
+
+
+def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]:
+    """
+    Read in DTAK JSONL file and return it as a dict
+
+    Files were created with: https://github.com/ybracke/dta2jsonl
+    There is no metadata available for this corpus.
+
+    Returns: {"orig" : [...], "norm" : [...]}
+    """
+    all_sents_orig, all_sents_norm = [], []
+    if metadata:
+        all_years, all_docs = [], []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            # Each data object is a paragraph
+            data = json.loads(line)
+            # Collect all sentences in list
+            all_sents_orig.append(data["text"])
+            all_sents_norm.append(data["norm"])
+            if metadata:
+                all_years.append(data["date"])
+                all_docs.append(data["identifier"])
+
+    if metadata:
+        return {
+            "orig": all_sents_orig,
+            "norm": all_sents_norm,
+            "year": all_years,
+            "document": all_docs,
+        }
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
 
 
 # def read_germanc_raw(path: str) -> Dict[str, List[str]]:
