@@ -441,13 +441,17 @@ def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]
     all_sents_orig, all_sents_norm = [], []
     if metadata:
         all_years, all_docs = [], []
+    # Compile regex for replacement, see below
+    pattern = re.compile(r"(\S)_(\S)")
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             # Each data object is a paragraph
             data = json.loads(line)
             # Collect all sentences in list
             all_sents_orig.append(data["text"])
-            all_sents_norm.append(data["norm"])
+            # Replace underscores in "norm" by spaces (e.g. "will_es" -> "will es")
+            sent_norm = re.sub(pattern, r"\1 \2", data["norm"])
+            all_sents_norm.append(sent_norm)
             if metadata:
                 all_years.append(data["date"])
                 all_docs.append(data["identifier"])
