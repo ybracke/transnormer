@@ -50,6 +50,7 @@ test = 1
 # truncation = true
 max_length_input = 128
 max_length_output = 128
+input_transliterator = "Transliterator1"
 
 # Model that is retrained
 [language_models]

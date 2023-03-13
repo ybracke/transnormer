@@ -9,12 +9,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import transformers
-
 from transformers import AutoTokenizer
-from tokenizers.normalizers import Normalizer
-from tokenizers import NormalizedString
 
 from transnormer.data import loader
+from transnormer.preprocess import translit
 
 
 def tokenize_input_and_output(
@@ -65,23 +63,6 @@ def train(
     """Training loop"""
 
     return None
-
-
-class CustomNormalizer:
-    def normalize(self, normalized: NormalizedString):
-        # Decompose combining characters
-        normalized.nfd()
-        # Some character conversions
-        normalized.replace("ſ", "s")
-        normalized.replace("ꝛ", "r")
-        normalized.replace(chr(0x0303), "")  # drop combining tilde
-        # convert "Combining Latin Small Letter E" to "e"
-        normalized.replace(chr(0x0364), "e")
-        normalized.replace("æ", "ae")
-        normalized.replace("ů", "ü")
-        normalized.replace("Ů", "Ü")
-        # Unicode composition (put decomposed chars back together)
-        normalized.nfc()
 
 
 # TODO pass this on the command-line
@@ -151,7 +132,17 @@ if __name__ == "__main__":
     tokenizer_input = AutoTokenizer.from_pretrained(
         CONFIGS["language_models"]["checkpoint_encoder"]
     )
-    tokenizer_input.backend_tokenizer.normalizer = Normalizer.custom(CustomNormalizer())
+    # Replace tokenizer's normalization component with a custom transliterator
+    if "input_transliterator" in CONFIGS["tokenizer"]:
+        from transnormer.preprocess import translit
+
+        if CONFIGS["tokenizer"]["input_transliterator"] == "Transliterator1":
+            transliterator = translit.Transliterator1()
+        else:
+            transliterator = None
+        tokenizer_input = translit.exchange_transliterator(
+            tokenizer_input, transliterator
+        )
 
     tokenizer_output = AutoTokenizer.from_pretrained(
         CONFIGS["language_models"]["checkpoint_decoder"]
