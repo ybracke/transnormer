@@ -73,6 +73,7 @@ def test_config_file_structure():
         "tokenizer": {
             "max_length_input": 128,
             "max_length_output": 128,
+            "input_transliterator": "Transliterator1",
         },
         "language_models": {
             "checkpoint_encoder": "dbmdz/bert-base-historic-multilingual-cased",
