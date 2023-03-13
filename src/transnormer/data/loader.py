@@ -434,13 +434,13 @@ def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]
     Read in DTAK JSONL file and return it as a dict
 
     Files were created with: https://github.com/ybracke/dta2jsonl
-    There is no metadata available for this corpus.
+    Available metadata are year, document name and genre.
 
-    Returns: {"orig" : [...], "norm" : [...]}
+    Returns: {"orig" : [...], "norm" : [...], + optional metadata }
     """
     all_sents_orig, all_sents_norm = [], []
     if metadata:
-        all_years, all_docs = [], []
+        all_years, all_docs, all_genres = [], [], []
     # Compile regex for replacement, see below
     pattern = re.compile(r"(\S)_(\S)")
     with open(path, "r", encoding="utf-8") as f:
@@ -455,6 +455,7 @@ def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]
             if metadata:
                 all_years.append(data["date"])
                 all_docs.append(data["identifier"])
+                all_genres.append(data["genre"])
 
     if metadata:
         return {
@@ -462,6 +463,7 @@ def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]
             "norm": all_sents_norm,
             "year": all_years,
             "document": all_docs,
+            "genre": all_genres,
         }
 
     return {"orig": all_sents_orig, "norm": all_sents_norm}
