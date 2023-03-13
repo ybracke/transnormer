@@ -134,8 +134,6 @@ if __name__ == "__main__":
     )
     # Replace tokenizer's normalization component with a custom transliterator
     if "input_transliterator" in CONFIGS["tokenizer"]:
-        from transnormer.preprocess import translit
-
         if CONFIGS["tokenizer"]["input_transliterator"] == "Transliterator1":
             transliterator = translit.Transliterator1()
         else:
