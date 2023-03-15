@@ -1,4 +1,5 @@
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
+import torch
 
 from transnormer.models import train_model
 from transnormer.data import loader
@@ -286,3 +287,76 @@ def test_load_and_merge_datasets_subsets2():
     assert dataset["train"].num_rows == 3
     assert dataset["validation"].num_rows == 2
     assert dataset["test"].num_rows == 1
+
+
+def test_tokenize_datasets():
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_validation": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_test": [
+                1_000_000,
+                1_000_000,
+            ],
+        },
+        "subset_sizes": {"train": 3, "validation": 2, "test": 1},
+        # The following configs don't matter ...
+        "tokenizer": {
+            "max_length_input": 128,
+            "max_length_output": 128,
+            "input_transliterator": "Transliterator1",
+        },
+        "language_models": {
+            "checkpoint_encoder": "prajjwal1/bert-tiny",
+            "checkpoint_decoder": "prajjwal1/bert-tiny",
+        },
+        "training_hyperparams": {
+            "batch_size": 10,
+            "epochs": 10,
+            "eval_steps": 1000,
+            "eval_strategy": "steps",
+            "save_steps": 10,
+            "fp16": True,
+        },
+        "beam_search_decoding": {
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+            "length_penalty": 2.0,
+            "num_beams": 4,
+        },
+    }
+
+    dataset = train_model.load_and_merge_datasets(CONFIGS)
+    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
+    # Check if input_ids have desired type (torch.Tensor) and length (tokenizer.max_length_input)
+    target_length = CONFIGS["tokenizer"]["max_length_input"]
+    assert all(
+        isinstance(prepared_dataset["train"]["input_ids"][i], torch.Tensor)
+        for i in range(prepared_dataset["train"].num_rows)
+    )
+    assert all(
+        len(prepared_dataset["train"]["input_ids"][i]) == target_length
+        for i in range(prepared_dataset["train"].num_rows)
+    )
+    assert isinstance(tok_in, PreTrainedTokenizerBase)
+    assert isinstance(tok_out, PreTrainedTokenizerBase)

@@ -4,15 +4,13 @@ import random
 import time
 import tomli
 
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 import datasets
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import transformers
-from transformers import AutoTokenizer
-
 from transnormer.data import loader
 from transnormer.preprocess import translit
 
@@ -53,6 +51,63 @@ def tokenize_input_and_output(
     ]
 
     return batch
+
+
+def tokenize_datasets(
+    dataset: datasets.DatasetDict, configs: Dict[str, Any]
+) -> Tuple[
+    datasets.DatasetDict,
+    transformers.PreTrainedTokenizerBase,
+    transformers.PreTrainedTokenizerBase,
+]:
+    """
+    Tokenize the datasets in a DatasetDict as specified in the config file.
+
+    Also returns the loaded input and output tokenizers.
+    """
+
+    # (1.1) Load input tokenizer
+    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+        configs["language_models"]["checkpoint_encoder"]
+    )
+    # (1.2) Optional: replace tokenizer's normalization component with a custom transliterator
+    if "input_transliterator" in configs["tokenizer"]:
+        if configs["tokenizer"]["input_transliterator"] == "Transliterator1":
+            transliterator = translit.Transliterator1()
+        else:
+            transliterator = None
+        tokenizer_input = translit.exchange_transliterator(
+            tokenizer_input, transliterator
+        )
+    # (2) Load output tokenizer
+    tokenizer_output = transformers.AutoTokenizer.from_pretrained(
+        configs["language_models"]["checkpoint_decoder"]
+    )
+
+    # (3) Define tokenization keyword arguments
+    tokenization_kwargs = {
+        "tokenizer_input": tokenizer_input,
+        "tokenizer_output": tokenizer_output,
+        "max_length_input": configs["tokenizer"]["max_length_input"],
+        "max_length_output": configs["tokenizer"]["max_length_output"],
+    }
+
+    # Tokenize by applying map function to the DatasetDict
+    prepared_dataset = dataset.map(
+        tokenize_input_and_output,
+        fn_kwargs=tokenization_kwargs,
+        remove_columns=["orig", "norm"],
+        batched=True,
+        batch_size=configs["training_hyperparams"]["batch_size"],
+    )
+
+    # Convert to torch tensors
+    prepared_dataset.set_format(
+        type="torch",
+        columns=["input_ids", "attention_mask", "labels"],
+    )
+
+    return prepared_dataset, tokenizer_input, tokenizer_output
 
 
 def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
@@ -139,48 +194,9 @@ if __name__ == "__main__":
 
     print("Tokenizing and preparing the data ...")
     start = time.process_time()
-
-    # Load tokenizers
-    tokenizer_input = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"]
+    prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(
+        dataset, CONFIGS
     )
-    # Replace tokenizer's normalization component with a custom transliterator
-    if "input_transliterator" in CONFIGS["tokenizer"]:
-        if CONFIGS["tokenizer"]["input_transliterator"] == "Transliterator1":
-            transliterator = translit.Transliterator1()
-        else:
-            transliterator = None
-        tokenizer_input = translit.exchange_transliterator(
-            tokenizer_input, transliterator
-        )
-
-    tokenizer_output = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_decoder"]
-    )
-
-    tokenization_kwargs = {
-        # FIXME: it is unclear how/if a custom tokenizer can be passed as a parameter
-        "tokenizer_input": tokenizer_input,
-        "tokenizer_output": tokenizer_output,
-        "max_length_input": CONFIGS["tokenizer"]["max_length_input"],
-        "max_length_output": CONFIGS["tokenizer"]["max_length_output"],
-    }
-
-    # Tokenize by applying a mapping
-    prepared_dataset = dataset.map(
-        tokenize_input_and_output,
-        fn_kwargs=tokenization_kwargs,
-        remove_columns=["orig", "norm"],
-        batched=True,
-        batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-    )
-
-    # Convert to torch tensors
-    prepared_dataset.set_format(
-        type="torch",
-        columns=["input_ids", "attention_mask", "labels"],
-    )
-
     end = time.process_time()
     print(f"Elapsed time for tokenization: {end - start}")
 
