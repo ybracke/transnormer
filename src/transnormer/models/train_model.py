@@ -4,6 +4,8 @@ import random
 import time
 import tomli
 
+from typing import Dict, Any
+
 import datasets
 import numpy as np
 import torch
@@ -53,6 +55,48 @@ def tokenize_input_and_output(
     return batch
 
 
+def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
+    """
+    Load, resample and merge the dataset splits as specified in the config file.
+    """
+
+    splits_and_paths = [
+        ("train", configs["data"]["paths_train"]),
+        ("validation", configs["data"]["paths_validation"]),
+        ("test", configs["data"]["paths_test"]),
+    ]
+
+    ds_split_merged = datasets.DatasetDict()
+    # Iterate over splits (i.e. train, validation, test)
+    for split, paths in splits_and_paths:
+        # Load all datasets for this split
+        dsets = [
+            datasets.load_dataset("json", data_files=path, split="train")
+            for path in paths
+        ]
+        # Map each dataset to the desired number of examples for this dataset
+        num_examples = configs["data"][f"n_examples_{split}"]
+        ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
+        # Merge and resample datasets for this split
+        ds = loader.merge_datasets(ds2num_examples, seed=configs["random_seed"])
+        ds_split_merged[split] = ds
+
+    dataset = ds_split_merged
+
+    # Optional: create smaller datasets from random examples
+    if "subset_sizes" in configs:
+        train_size = configs["subset_sizes"]["train"]
+        validation_size = configs["subset_sizes"]["validation"]
+        test_size = configs["subset_sizes"]["test"]
+        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
+        dataset["validation"] = (
+            dataset["validation"].shuffle().select(range(validation_size))
+        )
+        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
+
+    return dataset
+
+
 # not used yet
 def train(
     model: transformers.BertForMaskedLM,
@@ -89,39 +133,7 @@ if __name__ == "__main__":
     # (2) Load data
 
     print("Loading the data ...")
-
-    splits_and_paths = [
-        ("train", CONFIGS["data"]["paths_train"]),
-        ("validation", CONFIGS["data"]["paths_validation"]),
-        ("test", CONFIGS["data"]["paths_test"]),
-    ]
-    ds_split_merged = datasets.DatasetDict()
-    # Iterate over splits (i.e. train, validation, test)
-    for split, paths in splits_and_paths:
-        # Load all datasets for this split
-        dsets = [
-            datasets.load_dataset("json", data_files=path, split="train")
-            for path in paths
-        ]
-        # Map each dataset to the desired number of examples for this dataset
-        num_examples = CONFIGS["data"][f"n_examples_{split}"]
-        ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
-        # Merge and resample datasets for this split
-        ds = loader.merge_datasets(ds2num_examples, seed=CONFIGS["random_seed"])
-        ds_split_merged[split] = ds
-
-    dataset = ds_split_merged
-
-    # Create smaller datasets from random examples
-    if "subset_sizes" in CONFIGS:
-        train_size = CONFIGS["subset_sizes"]["train"]
-        validation_size = CONFIGS["subset_sizes"]["validation"]
-        test_size = CONFIGS["subset_sizes"]["test"]
-        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
-        dataset["validation"] = (
-            dataset["validation"].shuffle().select(range(validation_size))
-        )
-        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
+    dataset = load_and_merge_datasets(CONFIGS)
 
     # (3) Tokenize data
 
