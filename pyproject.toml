@@ -3,7 +3,7 @@ name = "transnormer"
 version = "0.1.0"
 description = "A lexical normalizer for historical spelling variants using a transformer architecture."
 authors = [
-  { name = "Yannic Bracke (BBAW)", email="yannic.bracke@bbaw.de" },
+  { name = "Yannic Bracke (BBAW)", email = "yannic.bracke@bbaw.de" },
 ]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -27,3 +27,6 @@ dependencies = [
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+ignore_missing_imports = true
