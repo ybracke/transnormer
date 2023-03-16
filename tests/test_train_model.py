@@ -433,6 +433,7 @@ def test_warmstart_seq2seq_model_normal():
     assert model.config.num_beams == 4
     assert model.config.max_length == 128
 
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="training requires cuda")
 def test_train_seq2seq_model():
     CONFIGS = {
