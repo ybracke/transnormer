@@ -183,14 +183,41 @@ def warmstart_seq2seq_model(
     return model
 
 
-# not used yet
-def train(
-    model: transformers.BertForMaskedLM,
-    train_dataloader: DataLoader,
-    val_dataloader: DataLoader,
-    optimizer: torch.optim.Optimizer,
+def train_seq2seq_model(
+    model: transformers.EncoderDecoderModel,
+    prepared_dataset: datasets.DatasetDict,
+    configs: Dict[str, Any],
+    output_dir: str,
 ) -> None:
-    """Training loop"""
+    """
+    Train an encoder-decoder model with given configurations.
+
+    `model` will be altered by this function.
+    """
+
+    # Set-up training arguments from hyperparameters
+    training_args = transformers.Seq2SeqTrainingArguments(
+        output_dir=output_dir,
+        predict_with_generate=True,
+        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
+        fp16=configs["training_hyperparams"]["fp16"],
+        eval_steps=configs["training_hyperparams"]["eval_steps"],
+        num_train_epochs=configs["training_hyperparams"]["epochs"],
+        per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
+        per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
+        save_steps=configs["training_hyperparams"]["save_steps"],
+    )
+
+    # Instantiate trainer
+    trainer = transformers.Seq2SeqTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=prepared_dataset["train"],
+        eval_dataset=prepared_dataset["validation"],
+    )
+
+    # Run training
+    trainer.train()
 
     return None
 
@@ -224,12 +251,9 @@ if __name__ == "__main__":
     # (3) Tokenize data
 
     print("Tokenizing and preparing the data ...")
-    start = time.process_time()
     prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(
         dataset, CONFIGS
     )
-    end = time.process_time()
-    print(f"Elapsed time for tokenization: {end - start}")
 
     # (4) Load models
 
@@ -238,37 +262,10 @@ if __name__ == "__main__":
 
     # (5) Training
 
-    print("Training ...")
-
-    training_args = transformers.Seq2SeqTrainingArguments(
-        output_dir=MODELDIR,
-        predict_with_generate=True,
-        evaluation_strategy=CONFIGS["training_hyperparams"]["eval_strategy"],
-        fp16=CONFIGS["training_hyperparams"]["fp16"],
-        eval_steps=CONFIGS["training_hyperparams"]["eval_steps"],
-        num_train_epochs=CONFIGS["training_hyperparams"]["epochs"],
-        per_device_train_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        per_device_eval_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        save_steps=CONFIGS["training_hyperparams"][
-            "save_steps"
-        ],  # Does this work? (custom tokenizer can't be saved)
-    )
-
-    # Instantiate trainer
-    trainer = transformers.Seq2SeqTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=prepared_dataset["train"],
-        eval_dataset=prepared_dataset["validation"],
-        # compute_metrics=compute_metrics, # TODO
-    )
-
-    trainer.train()
+    print("Training model ...")
+    train_seq2seq_model(model, prepared_dataset, CONFIGS, MODELDIR)
 
     # (6) Saving the final model
 
     model_path = os.path.join(MODELDIR, "model_final/")
     model.save_pretrained(model_path)
-    # this fails because a custom tokenizer can't be saved
-    # model_path = f"./models/model_fromtrainer/"
-    # trainer.save_model(model_path)

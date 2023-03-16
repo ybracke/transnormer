@@ -1,10 +1,12 @@
+import copy
+import os
+import tomli
+
 import transformers
 import torch
 
 from transnormer.models import train_model
 from transnormer.data import loader
-
-import tomli
 
 
 def test_tokenize_input_and_output():
@@ -429,3 +431,84 @@ def test_warmstart_seq2seq_model_normal():
     # Check some configs
     assert model.config.num_beams == 4
     assert model.config.max_length == 128
+
+
+def test_train_seq2seq_model():
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                3,
+                3,
+            ],
+            "n_examples_validation": [
+                2,
+                2,
+            ],
+            "n_examples_test": [
+                1,
+                1,
+            ],
+        },
+        # The following configs don't matter ...
+        "tokenizer": {
+            "max_length_input": 128,
+            "max_length_output": 128,
+            "input_transliterator": "Transliterator1",
+        },
+        "language_models": {
+            "checkpoint_encoder": "prajjwal1/bert-tiny",
+            "checkpoint_decoder": "prajjwal1/bert-tiny",
+        },
+        "training_hyperparams": {
+            "batch_size": 1,
+            "epochs": 1,
+            "eval_steps": 1,
+            "eval_strategy": "steps",
+            "save_steps": 1,
+            "fp16": True,
+        },
+        "beam_search_decoding": {
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+            "length_penalty": 2.0,
+            "num_beams": 4,
+        },
+    }
+    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    dataset = train_model.load_and_merge_datasets(CONFIGS)
+    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
+    model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
+
+    model_untrained = copy.deepcopy(model)
+    output_dir = "tests/testdata/tmp"
+    # Training
+    train_model.train_seq2seq_model(model, prepared_dataset, CONFIGS, output_dir)
+    # Compare all states and check that some of them changed
+    unequal_states = []
+    for (name_mo, params_mo), (name_mn, params_mn) in zip(
+        model_untrained.state_dict().items(), model.state_dict().items()
+    ):
+        assert name_mo == name_mn
+        if not torch.equal(params_mo, params_mn):
+            unequal_states.append(name_mo)
+    assert len(unequal_states) > 0
+    # Remove files that were created during training
+    for root, dirs, files in os.walk(output_dir, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        else:
+            os.rmdir(root)
