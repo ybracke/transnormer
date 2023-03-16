@@ -152,6 +152,37 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
     return dataset
 
 
+def warmstart_seq2seq_model(
+    configs: Dict[str, Any],
+    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    device: torch.device,
+) -> transformers.EncoderDecoderModel:
+    """
+    Load and configure an encoder-decoder model.
+    """
+
+    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
+        configs["language_models"]["checkpoint_encoder"],
+        configs["language_models"]["checkpoint_decoder"],
+    ).to(device)
+
+    # Setting the special tokens
+    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
+    model.config.eos_token_id = tokenizer_output.sep_token_id
+    model.config.pad_token_id = tokenizer_output.pad_token_id
+
+    # Params for beam search decoding
+    model.config.max_length = configs["tokenizer"]["max_length_output"]
+    model.config.no_repeat_ngram_size = configs["beam_search_decoding"][
+        "no_repeat_ngram_size"
+    ]
+    model.config.early_stopping = configs["beam_search_decoding"]["early_stopping"]
+    model.config.length_penalty = configs["beam_search_decoding"]["length_penalty"]
+    model.config.num_beams = configs["beam_search_decoding"]["num_beams"]
+
+    return model
+
+
 # not used yet
 def train(
     model: transformers.BertForMaskedLM,
@@ -203,26 +234,7 @@ if __name__ == "__main__":
     # (4) Load models
 
     print("Loading the pre-trained models ...")
-
-    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"],
-        CONFIGS["language_models"]["checkpoint_decoder"],
-    ).to(device)
-
-    # Setting the special tokens
-    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
-    model.config.eos_token_id = tokenizer_output.sep_token_id
-    model.config.pad_token_id = tokenizer_output.pad_token_id
-    # model.config.vocab_size = model.config.encoder.vocab_size # TODO
-
-    # Params for beam search decoding
-    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
-    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"][
-        "no_repeat_ngram_size"
-    ]
-    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
-    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
-    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
+    model = warmstart_seq2seq_model(CONFIGS, tokenizer_output, device)
 
     # (5) Training
 

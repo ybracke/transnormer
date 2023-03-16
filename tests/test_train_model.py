@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, PreTrainedTokenizerBase
+import transformers
 import torch
 
 from transnormer.models import train_model
@@ -13,10 +13,12 @@ def test_tokenize_input_and_output():
     dataset = loader.load_dtaeval_as_dataset(path)
 
     # Load tokenizers
-    tokenizer_input = AutoTokenizer.from_pretrained(
+    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
         "dbmdz/bert-base-historic-multilingual-cased"
     )
-    tokenizer_labels = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    tokenizer_labels = transformers.AutoTokenizer.from_pretrained(
+        "bert-base-multilingual-cased"
+    )
 
     # Parameters for tokenizing input and labels
     fn_kwargs = {
@@ -358,5 +360,72 @@ def test_tokenize_datasets():
         len(prepared_dataset["train"]["input_ids"][i]) == target_length
         for i in range(prepared_dataset["train"].num_rows)
     )
-    assert isinstance(tok_in, PreTrainedTokenizerBase)
-    assert isinstance(tok_out, PreTrainedTokenizerBase)
+    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
+    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
+
+
+def test_warmstart_seq2seq_model_normal():
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                3,
+                3,
+            ],
+            "n_examples_validation": [
+                2,
+                2,
+            ],
+            "n_examples_test": [
+                1,
+                1,
+            ],
+        },
+        # "subset_sizes": {"train": 3, "validation": 2, "test": 1},
+        # The following configs don't matter ...
+        "tokenizer": {
+            "max_length_input": 128,
+            "max_length_output": 128,
+            "input_transliterator": "Transliterator1",
+        },
+        "language_models": {
+            "checkpoint_encoder": "prajjwal1/bert-tiny",
+            "checkpoint_decoder": "prajjwal1/bert-tiny",
+        },
+        "training_hyperparams": {
+            "batch_size": 10,
+            "epochs": 10,
+            "eval_steps": 1000,
+            "eval_strategy": "steps",
+            "save_steps": 10,
+            "fp16": True,
+        },
+        "beam_search_decoding": {
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+            "length_penalty": 2.0,
+            "num_beams": 4,
+        },
+    }
+    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    dataset = train_model.load_and_merge_datasets(CONFIGS)
+    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
+    model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
+    # Check class
+    assert isinstance(model, transformers.EncoderDecoderModel)
+    # Check some configs
+    assert model.config.num_beams == 4
+    assert model.config.max_length == 128
