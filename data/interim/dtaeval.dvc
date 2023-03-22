@@ -1,0 +1,5 @@
+outs:
+- md5: 3452d8e800068c28f2fdd81b3f6e35ff.dir
+  size: 83638387
+  nfiles: 3
+  path: dtaeval
