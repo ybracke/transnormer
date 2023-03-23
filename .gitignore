@@ -96,8 +96,5 @@ temp/
 models/*
 !models/*.dvc
 
-# Don't track the training configuration file
-training_config.toml
-
-# Private notes file
-mynotes.md
+# Don't track the template for training configuration file
+training_config_template.toml

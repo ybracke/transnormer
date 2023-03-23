@@ -8,41 +8,23 @@ random_seed = 42
 
 # Data
 [data]
-paths_train = [
-    "data/interim/dtaeval/dtaeval-train.jsonl",
-    "data/interim/deu_news_2020/deu_news_2020-train.jsonl",
-]
-paths_validation = [
-    "data/interim/dtaeval/dtaeval-validation.jsonl",
-    "data/interim/deu_news_2020/deu_news_2020-validation.jsonl",
-]
-paths_test = [
-    "data/interim/dtaeval/dtaeval-test.jsonl",
-    "data/interim/deu_news_2020/deu_news_2020-test.jsonl",
-]
+paths_train = ["data/interim/ridges_bollmann/ridges_bollmann-train.jsonl"]
+paths_validation = ["data/interim/ridges_bollmann/ridges_bollmann-validation.jsonl"]
+paths_test = ["data/interim/ridges_bollmann/ridges_bollmann-test.jsonl"]
 # n_examples_{split} must be the same length as paths_{split}; each element is
 # an integer that defines the number of examples from the respective dataset
 # split that will be used during training; setting it to a giant number like
 # 1,000,000,000 is a simple way to ensure that all examples in this split will
 # be used
-n_examples_train = [
-    1_000_000_000,  # aka "all"
-    50_000,
-]
-n_examples_validation = [
-    1_000_000_000,
-    5_000,
-]
-n_examples_test = [
-    1_000_000_000,
-    5_000,
-]
+n_examples_train = [100]
+n_examples_validation = [10]
+n_examples_test = [1]
 
-# Data subsets sizes
-[subset_sizes]
-train = 100
-validation = 10
-test = 1
+# # Data subsets sizes
+# [subset_sizes]
+# train = 100
+# validation = 10
+# test = 1
 
 [tokenizer]
 # path = "resources/tokenizer-wp-dta1600-1899"
@@ -58,12 +40,12 @@ checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
 checkpoint_decoder = "bert-base-multilingual-cased"
 
 [training_hyperparams]
-batch_size = 10
-epochs = 10
+batch_size = 32
+epochs = 25
 # learning_rate = 0.0005
-eval_steps = 1000
+eval_steps = 25_000
 eval_strategy = "steps"
-save_steps = 10
+save_steps = 50
 fp16 = true
 
 
