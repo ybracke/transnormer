@@ -1,0 +1,54 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python src/transnormer/models/train_model.py
+    deps:
+    - path: data/interim/
+      md5: 7ebea01a0c2f28ff2a3752f03656757e.dir
+      size: 2613158837
+      nfiles: 26
+    - path: src/transnormer/data/loader.py
+      md5: 00d0838fe35a924b33835d74069b3416
+      size: 17051
+    - path: src/transnormer/preprocess/translit.py
+      md5: 66fb8313cdf24aa842fd6a39ea84ab79
+      size: 1815
+    params:
+      training_config.toml:
+        beam_search_decoding:
+          no_repeat_ngram_size: 3
+          early_stopping: true
+          length_penalty: 2.0
+          num_beams: 4
+        data:
+          paths_train:
+          - data/interim/ridges_bollmann/ridges_bollmann-train.jsonl
+          paths_validation:
+          - data/interim/ridges_bollmann/ridges_bollmann-validation.jsonl
+          paths_test:
+          - data/interim/ridges_bollmann/ridges_bollmann-test.jsonl
+          n_examples_train:
+          - 100
+          n_examples_validation:
+          - 10
+          n_examples_test:
+          - 1
+        language_models:
+          checkpoint_encoder: dbmdz/bert-base-historic-multilingual-cased
+          checkpoint_decoder: bert-base-multilingual-cased
+        tokenizer:
+          max_length_input: 128
+          max_length_output: 128
+          input_transliterator: Transliterator1
+        training_hyperparams:
+          batch_size: 32
+          epochs: 25
+          eval_steps: 25000
+          eval_strategy: steps
+          save_steps: 50
+          fp16: true
+    outs:
+    - path: models/model/
+      md5: e70570cd8b950ba967d89ce0f26251ce.dir
+      size: 8866616127
+      nfiles: 21

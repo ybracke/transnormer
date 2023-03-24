@@ -1,0 +1,5 @@
+outs:
+- md5: d981144fbfa3b3a7900056571865c0a2.dir
+  size: 512649220
+  nfiles: 4
+  path: deu_news_2020

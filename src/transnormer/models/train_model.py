@@ -232,9 +232,8 @@ if __name__ == "__main__":
     # Load configs
     with open(CONFIGFILE, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    MODELDIR = os.path.join(ROOT, f"./models/models_{timestamp}")
-
+    MODELDIR = os.path.join(ROOT, f"./models/model")
+    
     # Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
     np.random.seed(CONFIGS["random_seed"])

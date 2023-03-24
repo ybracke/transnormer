@@ -1,0 +1,5 @@
+[core]
+    analytics = false
+    remote = local
+['remote "local"']
+    url = /home/bracke/dvcstore/
