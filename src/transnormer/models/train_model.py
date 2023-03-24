@@ -4,13 +4,13 @@ import random
 import time
 import tomli
 
+from typing import Dict, Any, Tuple
+
 import datasets
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import transformers
-from transformers import AutoTokenizer
-
 from transnormer.data import loader
 from transnormer.preprocess import translit
 
@@ -53,14 +53,171 @@ def tokenize_input_and_output(
     return batch
 
 
-# not used yet
-def train(
-    model: transformers.BertForMaskedLM,
-    train_dataloader: DataLoader,
-    val_dataloader: DataLoader,
-    optimizer: torch.optim.Optimizer,
+def tokenize_datasets(
+    dataset: datasets.DatasetDict, configs: Dict[str, Any]
+) -> Tuple[
+    datasets.DatasetDict,
+    transformers.PreTrainedTokenizerBase,
+    transformers.PreTrainedTokenizerBase,
+]:
+    """
+    Tokenize the datasets in a DatasetDict as specified in the config file.
+
+    Also returns the loaded input and output tokenizers.
+    """
+
+    # (1.1) Load input tokenizer
+    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+        configs["language_models"]["checkpoint_encoder"]
+    )
+    # (1.2) Optional: replace tokenizer's normalization component with a custom transliterator
+    if "input_transliterator" in configs["tokenizer"]:
+        if configs["tokenizer"]["input_transliterator"] == "Transliterator1":
+            transliterator = translit.Transliterator1()
+        else:
+            transliterator = None
+        tokenizer_input = translit.exchange_transliterator(
+            tokenizer_input, transliterator
+        )
+    # (2) Load output tokenizer
+    tokenizer_output = transformers.AutoTokenizer.from_pretrained(
+        configs["language_models"]["checkpoint_decoder"]
+    )
+
+    # (3) Define tokenization keyword arguments
+    tokenization_kwargs = {
+        "tokenizer_input": tokenizer_input,
+        "tokenizer_output": tokenizer_output,
+        "max_length_input": configs["tokenizer"]["max_length_input"],
+        "max_length_output": configs["tokenizer"]["max_length_output"],
+    }
+
+    # Tokenize by applying map function to the DatasetDict
+    prepared_dataset = dataset.map(
+        tokenize_input_and_output,
+        fn_kwargs=tokenization_kwargs,
+        remove_columns=["orig", "norm"],
+        batched=True,
+        batch_size=configs["training_hyperparams"]["batch_size"],
+    )
+
+    # Convert to torch tensors
+    prepared_dataset.set_format(
+        type="torch",
+        columns=["input_ids", "attention_mask", "labels"],
+    )
+
+    return prepared_dataset, tokenizer_input, tokenizer_output
+
+
+def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
+    """
+    Load, resample and merge the dataset splits as specified in the config file.
+    """
+
+    splits_and_paths = [
+        ("train", configs["data"]["paths_train"]),
+        ("validation", configs["data"]["paths_validation"]),
+        ("test", configs["data"]["paths_test"]),
+    ]
+
+    ds_split_merged = datasets.DatasetDict()
+    # Iterate over splits (i.e. train, validation, test)
+    for split, paths in splits_and_paths:
+        # Load all datasets for this split
+        dsets = [
+            datasets.load_dataset("json", data_files=path, split="train")
+            for path in paths
+        ]
+        # Map each dataset to the desired number of examples for this dataset
+        num_examples = configs["data"][f"n_examples_{split}"]
+        ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
+        # Merge and resample datasets for this split
+        ds = loader.merge_datasets(ds2num_examples, seed=configs["random_seed"])
+        ds_split_merged[split] = ds
+
+    dataset = ds_split_merged
+
+    # Optional: create smaller datasets from random examples
+    if "subset_sizes" in configs:
+        train_size = configs["subset_sizes"]["train"]
+        validation_size = configs["subset_sizes"]["validation"]
+        test_size = configs["subset_sizes"]["test"]
+        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
+        dataset["validation"] = (
+            dataset["validation"].shuffle().select(range(validation_size))
+        )
+        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
+
+    return dataset
+
+
+def warmstart_seq2seq_model(
+    configs: Dict[str, Any],
+    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    device: torch.device,
+) -> transformers.EncoderDecoderModel:
+    """
+    Load and configure an encoder-decoder model.
+    """
+
+    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
+        configs["language_models"]["checkpoint_encoder"],
+        configs["language_models"]["checkpoint_decoder"],
+    ).to(device)
+
+    # Setting the special tokens
+    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
+    model.config.eos_token_id = tokenizer_output.sep_token_id
+    model.config.pad_token_id = tokenizer_output.pad_token_id
+
+    # Params for beam search decoding
+    model.config.max_length = configs["tokenizer"]["max_length_output"]
+    model.config.no_repeat_ngram_size = configs["beam_search_decoding"][
+        "no_repeat_ngram_size"
+    ]
+    model.config.early_stopping = configs["beam_search_decoding"]["early_stopping"]
+    model.config.length_penalty = configs["beam_search_decoding"]["length_penalty"]
+    model.config.num_beams = configs["beam_search_decoding"]["num_beams"]
+
+    return model
+
+
+def train_seq2seq_model(
+    model: transformers.EncoderDecoderModel,
+    prepared_dataset: datasets.DatasetDict,
+    configs: Dict[str, Any],
+    output_dir: str,
 ) -> None:
-    """Training loop"""
+    """
+    Train an encoder-decoder model with given configurations.
+
+    `model` will be altered by this function.
+    """
+
+    # Set-up training arguments from hyperparameters
+    training_args = transformers.Seq2SeqTrainingArguments(
+        output_dir=output_dir,
+        predict_with_generate=True,
+        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
+        fp16=configs["training_hyperparams"]["fp16"],
+        eval_steps=configs["training_hyperparams"]["eval_steps"],
+        num_train_epochs=configs["training_hyperparams"]["epochs"],
+        per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
+        per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
+        save_steps=configs["training_hyperparams"]["save_steps"],
+    )
+
+    # Instantiate trainer
+    trainer = transformers.Seq2SeqTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=prepared_dataset["train"],
+        eval_dataset=prepared_dataset["validation"],
+    )
+
+    # Run training
+    trainer.train()
 
     return None
 
@@ -89,146 +246,26 @@ if __name__ == "__main__":
     # (2) Load data
 
     print("Loading the data ...")
-
-    splits_and_paths = [
-        ("train", CONFIGS["data"]["paths_train"]),
-        ("validation", CONFIGS["data"]["paths_validation"]),
-        ("test", CONFIGS["data"]["paths_test"]),
-    ]
-    ds_split_merged = datasets.DatasetDict()
-    # Iterate over splits (i.e. train, validation, test)
-    for split, paths in splits_and_paths:
-        # Load all datasets for this split
-        dsets = [
-            datasets.load_dataset("json", data_files=path, split="train")
-            for path in paths
-        ]
-        # Map each dataset to the desired number of examples for this dataset
-        num_examples = CONFIGS["data"][f"n_examples_{split}"]
-        ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
-        # Merge and resample datasets for this split
-        ds = loader.merge_datasets(ds2num_examples, seed=CONFIGS["random_seed"])
-        ds_split_merged[split] = ds
-
-    dataset = ds_split_merged
-
-    # Create smaller datasets from random examples
-    if "subset_sizes" in CONFIGS:
-        train_size = CONFIGS["subset_sizes"]["train"]
-        validation_size = CONFIGS["subset_sizes"]["validation"]
-        test_size = CONFIGS["subset_sizes"]["test"]
-        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
-        dataset["validation"] = (
-            dataset["validation"].shuffle().select(range(validation_size))
-        )
-        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
+    dataset = load_and_merge_datasets(CONFIGS)
 
     # (3) Tokenize data
 
     print("Tokenizing and preparing the data ...")
-    start = time.process_time()
-
-    # Load tokenizers
-    tokenizer_input = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"]
+    prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(
+        dataset, CONFIGS
     )
-    # Replace tokenizer's normalization component with a custom transliterator
-    if "input_transliterator" in CONFIGS["tokenizer"]:
-        if CONFIGS["tokenizer"]["input_transliterator"] == "Transliterator1":
-            transliterator = translit.Transliterator1()
-        else:
-            transliterator = None
-        tokenizer_input = translit.exchange_transliterator(
-            tokenizer_input, transliterator
-        )
-
-    tokenizer_output = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_decoder"]
-    )
-
-    tokenization_kwargs = {
-        # FIXME: it is unclear how/if a custom tokenizer can be passed as a parameter
-        "tokenizer_input": tokenizer_input,
-        "tokenizer_output": tokenizer_output,
-        "max_length_input": CONFIGS["tokenizer"]["max_length_input"],
-        "max_length_output": CONFIGS["tokenizer"]["max_length_output"],
-    }
-
-    # Tokenize by applying a mapping
-    prepared_dataset = dataset.map(
-        tokenize_input_and_output,
-        fn_kwargs=tokenization_kwargs,
-        remove_columns=["orig", "norm"],
-        batched=True,
-        batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-    )
-
-    # Convert to torch tensors
-    prepared_dataset.set_format(
-        type="torch",
-        columns=["input_ids", "attention_mask", "labels"],
-    )
-
-    end = time.process_time()
-    print(f"Elapsed time for tokenization: {end - start}")
 
     # (4) Load models
 
     print("Loading the pre-trained models ...")
-
-    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"],
-        CONFIGS["language_models"]["checkpoint_decoder"],
-    ).to(device)
-
-    # Setting the special tokens
-    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
-    model.config.eos_token_id = tokenizer_output.sep_token_id
-    model.config.pad_token_id = tokenizer_output.pad_token_id
-    # model.config.vocab_size = model.config.encoder.vocab_size # TODO
-
-    # Params for beam search decoding
-    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
-    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"][
-        "no_repeat_ngram_size"
-    ]
-    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
-    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
-    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
+    model = warmstart_seq2seq_model(CONFIGS, tokenizer_output, device)
 
     # (5) Training
 
-    print("Training ...")
-
-    training_args = transformers.Seq2SeqTrainingArguments(
-        output_dir=MODELDIR,
-        predict_with_generate=True,
-        evaluation_strategy=CONFIGS["training_hyperparams"]["eval_strategy"],
-        fp16=CONFIGS["training_hyperparams"]["fp16"],
-        eval_steps=CONFIGS["training_hyperparams"]["eval_steps"],
-        num_train_epochs=CONFIGS["training_hyperparams"]["epochs"],
-        per_device_train_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        per_device_eval_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        save_steps=CONFIGS["training_hyperparams"][
-            "save_steps"
-        ],  # Does this work? (custom tokenizer can't be saved)
-    )
-
-    # Instantiate trainer
-    trainer = transformers.Seq2SeqTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=prepared_dataset["train"],
-        eval_dataset=prepared_dataset["validation"],
-        # compute_metrics=compute_metrics, # TODO
-    )
-
-    trainer.train()
+    print("Training model ...")
+    train_seq2seq_model(model, prepared_dataset, CONFIGS, MODELDIR)
 
     # (6) Saving the final model
 
     model_path = os.path.join(MODELDIR, "model_final/")
     model.save_pretrained(model_path)
-    # this fails because a custom tokenizer can't be saved
-    # model_path = f"./models/model_fromtrainer/"
-    # trainer.save_model(model_path)
