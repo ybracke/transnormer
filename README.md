@@ -147,4 +147,69 @@ lexical normalization.
 * Paper ["Leveraging Pre-trained Checkpoints for Sequence Generation Tasks"](https://arxiv.org/abs/1907.12461)
 
 
+## DVC 
 
+This project uses [DVC](https://dvc.org/doc) for (1) versioning data and model
+files (2) tracking experiments. 
+
+### Versioning data and models
+
+Large data and model files are versioned with DVC and do not get tracked by git.
+Instead, only a hash (stored in a text file) is tracked by git, either in a
+`<dataname>.dvc` or in `dvc.lock` are tracked by git. 
+
+`dvc list . --dvc-only --recursive`  
+-> shows the files tracked by DVC
+
+`dvc push` moves a specific version of the data to the remote storage.
+
+
+### Tracking experiments
+
+DVC is also used for tracking experiments to make models reproducible and to
+separate code-development from experiments. Each DVC experiment is a snapshot of
+the state of the code, the configs, the trained model resulting from these, and
+possibly evaluation metrics at a specific point in time.
+
+#### Workflow
+
+1. Make sure any recent changes to the code are committed
+2. Set parameters in the config file (`training_config.toml`)
+3. Make sure `dvc.yaml` is still up-to-date (i.e. contains all dependencies,
+  parameters, output locations, etc.)
+4. Run the training with `dvc exp run` 
+   * You can also set parameters in the config file at this stage with
+     `--set-params|-S`. Example:   
+     `dvc exp run -S 'training_config.toml:training_hyperparams.save_steps=50'`)
+5. `dvc exp run` (1) creates a new version of the model and (2) modifies
+  `dvc.lock`. Instead of an individual `model.dvc` file for the model, its path,
+  md5, etc. are stored in `dvc.lock` under `outs`, (3) creates a hidden commit
+  that also contains the config and `dvc.lock` (i.e. a link to the updated
+  model).
+6. To push the new model version to the remote, do: `dvc push models/model`.
+7. `git restore .` will restore the updated `dvc.lock` and config files. You
+   don't have to git-commit these separately to git because this was already done
+   automatically in step 5.
+
+
+#### Background
+
+An experiment in DVC is a set of changes to your data, code, and configuration
+that you want to track and reproduce. When you run `dvc exp run` command, DVC
+will create a snapshot of your code and data, and save it as a hidden git
+commit. Technically: Experiments are custom Git references (found in
+`.git/refs/exps`) with one or more commits based on HEAD. These commits are
+hidden and not checked out by DVC and not pushed to git remotes either.
+
+
+### Checking out a specific experiment
+
+`dvc exp show`  
+-> shows the experiments done on the current HEAD (add `-A` for all commits)
+
+`dvc exp apply <name>`    
+-> puts the version of configs, code and model for experiment `<name>` into the
+current workspace
+
+`dvc exp apply HEAD`   
+-> goes back to status of HEAD
