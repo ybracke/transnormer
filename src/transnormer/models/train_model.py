@@ -99,6 +99,7 @@ def tokenize_datasets(
         remove_columns=["orig", "norm"],
         batched=True,
         batch_size=configs["training_hyperparams"]["batch_size"],
+        load_from_cache_file=False,
     )
 
     # Convert to torch tensors
