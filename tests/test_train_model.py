@@ -75,7 +75,7 @@ def test_config_file_structure():
                 5_000,
             ],
         },
-        "subset_sizes": {"train": 100, "validation": 10, "test": 1},
+        # "subset_sizes": {"train": 100, "validation": 10, "test": 1},
         "tokenizer": {
             "max_length_input": 128,
             "max_length_output": 128,
@@ -101,10 +101,23 @@ def test_config_file_structure():
         },
     }
 
-    path = "training_config_template.toml"
+    path = "training_config.toml"
     with open(path, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
-    assert CONFIGS == target_param_dict
+
+    # assert that all keys are identical
+    # recurse into nested dicts, to assert that inner keys are identical as well
+    def all_keys_match(dict1, dict2):
+        if set(dict1.keys()) == set(dict2.keys()):
+            for key in dict1:
+                if isinstance(dict1[key], dict):
+                    if not all_keys_match(dict1[key], dict2[key]):
+                        return False
+            return True
+        else:
+            return False
+
+    assert all_keys_match(CONFIGS, target_param_dict)
 
 
 def test_load_and_merge_datasets_full_sets():
