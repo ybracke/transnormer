@@ -5,6 +5,7 @@ stages:
     - data/interim/
     - src/transnormer/data/loader.py
     - src/transnormer/preprocess/translit.py
+    - src/transnormer/models/train_model.py
     params:
     - training_config.toml:
       - data
