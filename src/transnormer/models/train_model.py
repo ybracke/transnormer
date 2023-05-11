@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import random
+import shutil
 import time
 import tomli
 
@@ -234,7 +235,7 @@ if __name__ == "__main__":
     with open(CONFIGFILE, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
     MODELDIR = os.path.join(ROOT, "./models/model")
-
+    
     # Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
     np.random.seed(CONFIGS["random_seed"])
@@ -272,3 +273,6 @@ if __name__ == "__main__":
 
     model_path = os.path.join(MODELDIR, "model_final/")
     model.save_pretrained(model_path)
+
+    # (7) Save the config file to model directory
+    shutil.copy(CONFIGFILE, MODELDIR)
