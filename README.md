@@ -171,7 +171,7 @@ separate code-development from experiments. Each DVC experiment is a snapshot of
 the state of the code, the configs, the trained model resulting from these, and
 possibly evaluation metrics at a specific point in time.
 
-#### Workflow
+#### Workflow: Run experiment
 
 1. Make sure any recent changes to the code are committed
 2. Set parameters in the config file (`training_config.toml`)
@@ -181,16 +181,34 @@ possibly evaluation metrics at a specific point in time.
    * You can also set parameters in the config file at this stage with
      `--set-params|-S`. Example:   
      `dvc exp run -S 'training_config.toml:training_hyperparams.save_steps=50'`)
-5. `dvc exp run` (1) creates a new version of the model and (2) modifies
-  `dvc.lock`. Instead of an individual `model.dvc` file for the model, its path,
-  md5, etc. are stored in `dvc.lock` under `outs`, (3) creates a hidden commit
-  that also contains the config and `dvc.lock` (i.e. a link to the updated
-  model).
+5. Do `dvc exp run [--name <exp-name>]`   
+   (1) creates a new version of the model;   
+   (2) modifies `dvc.lock`. Instead of an individual `model.dvc` file for the
+  model, its path, md5, etc. are stored in `dvc.lock` under `outs`;  
+  (3) creates a hidden commit that also contains the config and `dvc.lock` (i.e.
+  a link to the updated model).  
 6. To push the new model version to the remote, do: `dvc push models/model`.
 7. `git restore .` will restore the updated `dvc.lock` and config files. You
    don't have to git-commit these separately to git because this was already done
    automatically in step 5.
 
+#### Workflow: Use a model from a specific experiment
+
+1. `dvc exp branch <branch-name> <exp-name>` will create a git branch from the
+   experiment. It makes sense to give the branch the same name as the
+   experiment in order to associate them easily.
+   (The experiment branch can be also created later from a hidden commit (see
+   `dvc exp show --all-commits` to see all candidates). Note that the code in
+   the experiment branch will be in the state as it was at the time of running
+   the experiment.)
+2. The experiment branch can now be used to analyze the model by running
+   inspection notebooks.  
+3. Push the experiment branch to remote in order to be able to look at the
+   analyses notebooks on GitHub. Remove the experiment branch from remote or
+   alltogether if they are not needed them anymore (they can be recreated, see
+   point 1).
+4. You can reproduce the experiment (i.e. train the model again) either on the
+   experiment branch or if you did `dvc exp apply <exp-name>` (on branch `dev`).
 
 #### Background
 
@@ -200,16 +218,3 @@ will create a snapshot of your code and data, and save it as a hidden git
 commit. Technically: Experiments are custom Git references (found in
 `.git/refs/exps`) with one or more commits based on HEAD. These commits are
 hidden and not checked out by DVC and not pushed to git remotes either.
-
-
-### Checking out a specific experiment
-
-`dvc exp show`  
--> shows the experiments done on the current HEAD (add `-A` for all commits)
-
-`dvc exp apply <name>`    
--> puts the version of configs, code and model for experiment `<name>` into the
-current workspace
-
-`dvc exp apply HEAD`   
--> goes back to status of HEAD
