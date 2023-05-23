@@ -8,3 +8,4 @@ matplotlib==3.6.3
 nltk==3.8.1
 tomli==2.0.1
 transformers==4.26.0
+diff-match-patch==20200713
