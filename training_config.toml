@@ -8,17 +8,43 @@ random_seed = 42
 
 # Data
 [data]
-paths_train = ["data/interim/ridges_bollmann/ridges_bollmann-train.jsonl"]
-paths_validation = ["data/interim/ridges_bollmann/ridges_bollmann-validation.jsonl"]
-paths_test = ["data/interim/ridges_bollmann/ridges_bollmann-test.jsonl"]
+paths_train = [
+    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
+    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
+    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
+    ]
+
+paths_validation = [
+    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
+    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
+    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
+    ]
+
+paths_test = [
+    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
+    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
+    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
+    ]
 # n_examples_{split} must be the same length as paths_{split}; each element is
 # an integer that defines the number of examples from the respective dataset
 # split that will be used during training; setting it to a giant number like
 # 1,000,000,000 is a simple way to ensure that all examples in this split will
 # be used
-n_examples_train = [100]
-n_examples_validation = [10]
-n_examples_test = [1]
+n_examples_train = [
+    1_000_000_000,
+    1_000_000_000,
+    1_000_000_000,
+    ]
+n_examples_validation = [
+    1_000_000_000,
+    1_000_000_000,
+    1_000_000_000,
+    ]
+n_examples_test = [
+    1_000_000_000,
+    1_000_000_000,
+    1_000_000_000,
+    ]
 
 # # Data subsets sizes
 # [subset_sizes]
@@ -41,11 +67,11 @@ checkpoint_decoder = "bert-base-multilingual-cased"
 
 [training_hyperparams]
 batch_size = 32
-epochs = 25
+epochs = 3
 # learning_rate = 0.0005
 eval_steps = 25_000
 eval_strategy = "steps"
-save_steps = 50
+save_steps = 25_000
 fp16 = true
 
 
