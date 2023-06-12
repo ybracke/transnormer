@@ -4,12 +4,15 @@ stages:
     cmd: python src/transnormer/models/train_model.py
     deps:
     - path: data/interim/
-      md5: 7ebea01a0c2f28ff2a3752f03656757e.dir
-      size: 2613158837
-      nfiles: 26
+      md5: b06fb78131a5c2e0086a04d7845eb8e5.dir
+      size: 4631334659
+      nfiles: 38
     - path: src/transnormer/data/loader.py
-      md5: 00d0838fe35a924b33835d74069b3416
-      size: 17051
+      md5: 93c6f48ee6589bae795e7c1a8385bc06
+      size: 16822
+    - path: src/transnormer/models/train_model.py
+      md5: db9b541696c897143b5091c78e85f8f5
+      size: 9113
     - path: src/transnormer/preprocess/translit.py
       md5: 66fb8313cdf24aa842fd6a39ea84ab79
       size: 1815
@@ -22,17 +25,29 @@ stages:
           num_beams: 4
         data:
           paths_train:
-          - data/interim/ridges_bollmann/ridges_bollmann-train.jsonl
+          - data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl
+          - data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl
+          - data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl
           paths_validation:
-          - data/interim/ridges_bollmann/ridges_bollmann-validation.jsonl
+          - data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl
+          - data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl
+          - data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl
           paths_test:
-          - data/interim/ridges_bollmann/ridges_bollmann-test.jsonl
+          - data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl
+          - data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl
+          - data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl
           n_examples_train:
           - 100
+          - 100
+          - 100
           n_examples_validation:
-          - 10
+          - 100
+          - 100
+          - 100
           n_examples_test:
-          - 1
+          - 100
+          - 100
+          - 100
         language_models:
           checkpoint_encoder: dbmdz/bert-base-historic-multilingual-cased
           checkpoint_decoder: bert-base-multilingual-cased
@@ -42,13 +57,13 @@ stages:
           input_transliterator: Transliterator1
         training_hyperparams:
           batch_size: 32
-          epochs: 25
+          epochs: 10
           eval_steps: 25000
           eval_strategy: steps
           save_steps: 50
           fp16: true
     outs:
     - path: models/model/
-      md5: e70570cd8b950ba967d89ce0f26251ce.dir
-      size: 8866616127
-      nfiles: 21
+      md5: 920fd9d8566c4044252a246d076627ad.dir
+      size: 8866618687
+      nfiles: 22
