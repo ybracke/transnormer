@@ -235,7 +235,7 @@ if __name__ == "__main__":
     with open(CONFIGFILE, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
     MODELDIR = os.path.join(ROOT, "./models/model")
-    
+
     # Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
     np.random.seed(CONFIGS["random_seed"])
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     # GPU set-up
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
     # limit memory usage to 80%
-    if torch.cuda.is_available(): 
+    if torch.cuda.is_available():
         torch.cuda.set_per_process_memory_fraction(0.8, device)
 
     # (2) Load data
