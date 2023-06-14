@@ -228,6 +228,7 @@ def train_seq2seq_model(
         per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
         save_steps=configs["training_hyperparams"]["save_steps"],
+        logging_steps=configs["training_hyperparams"]["logging_steps"],
     )
 
     # Instantiate trainer
