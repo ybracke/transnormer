@@ -10,20 +10,20 @@ random_seed = 42
 [data]
 paths_train = [
     "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
-    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
-    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
     ]
 
 paths_validation = [
     "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
-    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
-    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
     ]
 
 paths_test = [
     "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
-    "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
-    "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
     ]
 # n_examples_{split} must be the same length as paths_{split}; each element is
 # an integer that defines the number of examples from the respective dataset
@@ -31,19 +31,19 @@ paths_test = [
 # 1,000,000,000 is a simple way to ensure that all examples in this split will
 # be used
 n_examples_train = [
-    1_000_000_000,
-    1_000_000_000,
-    1_000_000_000,
+    128,
+    # 1_000_000_000,
+    # 1_000_000_000,
     ]
 n_examples_validation = [
-    1_000_000_000,
-    1_000_000_000,
-    1_000_000_000,
+    64,
+    # 1_000_000_000,
+    # 1_000_000_000,
     ]
 n_examples_test = [
-    1_000_000_000,
-    1_000_000_000,
-    1_000_000_000,
+    1,
+    # 1_000_000_000,
+    # 1_000_000_000,
     ]
 
 # # Data subsets sizes
@@ -56,23 +56,25 @@ n_examples_test = [
 # path = "resources/tokenizer-wp-dta1600-1899"
 # padding = true
 # truncation = true
-max_length_input = 128
-max_length_output = 128
-input_transliterator = "Transliterator1"
+max_length_input = 256
+max_length_output = 256
+# input_transliterator = "Transliterator1"
 
 # Model that is retrained
 [language_models]
-checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
-checkpoint_decoder = "bert-base-multilingual-cased"
+# checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
+# checkpoint_decoder = "bert-base-multilingual-cased"
+checkpoint_encoder_decoder = "google/byt5-small"
 
 [training_hyperparams]
-batch_size = 32
-epochs = 3
+batch_size = 16
+epochs = 100
 # learning_rate = 0.0005
-eval_steps = 25_000
+logging_steps = 100
+eval_steps = 100
 eval_strategy = "steps"
-save_steps = 25_000
-fp16 = true
+save_steps = 400
+fp16 = false
 
 
 # Params for beam search decoding
