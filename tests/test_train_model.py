@@ -133,6 +133,7 @@ def test_config_file_structure():
         "training_hyperparams": {
             "batch_size": 10,
             "epochs": 10,
+            "logging_steps": 1_000,
             "eval_steps": 1000,
             "eval_strategy": "steps",
             "save_steps": 10,
@@ -149,6 +150,16 @@ def test_config_file_structure():
     path = "training_config.toml"
     with open(path, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
+
+    # Remove certain keys if input CONFIG has a (byte-based) encoder-decoder
+    # as model 
+    try:
+        if "checkpoint_encoder_decoder" in CONFIGS["language_models"]:
+            CONFIGS.pop("language_models")
+            target_param_dict.pop("language_models")
+            target_param_dict["tokenizer"].pop("input_transliterator")
+    except KeyError:
+        assert False
 
     # assert that all keys are identical
     # recurse into nested dicts, to assert that inner keys are identical as well
@@ -669,6 +680,7 @@ def test_train_seq2seq_model():
         "training_hyperparams": {
             "batch_size": 1,
             "epochs": 1,
+            "logging_steps" : 1,
             "eval_steps": 1,
             "eval_strategy": "steps",
             "save_steps": 1,
