@@ -10,13 +10,13 @@ applying a model and inspecting and evaluating a model's performance.
 ## Project Organization
 
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train` [not in use yet]
     ├── README.md          
     ├── requirements.txt   
     ├── requirements-dev.txt   
     ├── pyproject.toml     <- makes project pip installable 
+    ├── training_config.toml <- Configurations for training
     |
-    ├── data                  [not in use yet]
+    ├── data                  
     │   ├── external       <- Data from third party sources.
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
@@ -31,27 +31,31 @@ applying a model and inspecting and evaluating a model's performance.
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures        <- Generated graphics and figures to be used in reporting
     │
-    └── src                <- Source code for use in this project. [TODO]
-        └── transnormer        
-            ├── __init__.py    <- Makes src a Python module
-            │
-            ├── data           <- Scripts to download or generate data
-            │   └── make_dataset.py
-            │
-            ├── features       <- Scripts to turn raw data into features for modeling
-            │   └── build_features.py
-            │
-            ├── models         <- Scripts to train models and then use trained models to make
-            │   │                 predictions
-            │   ├── predict_model.py
-            │   └── train_model.py
-            |
-            └── tests  <- Testing facilities for source code
-            │
-            └── visualization  <- Scripts to create exploratory and results oriented visualizations
-                └── visualize.py
-
-
+    └── src                <- Source code for use in this project. 
+    |    └── transnormer        
+    |        ├── __init__.py    <- Makes src a Python module
+    |        │
+    |        ├── data           <- to download or generate data
+    |        │   └── loader.py
+    |        │   └── make_dataset.py
+    |        │   └── split_dataset.py
+    |        │
+    |        ├── evaluation     <- evaluation functions
+    |        │   └── analysis.py
+    |        │
+    |        ├── models
+    |        │   ├── predict_model.py
+    |        │   └── train_model.py
+    |        │
+    |        ├── preprocess
+    |        │   └── translit.py
+    |        │
+    |        └── visualization  <- create visualizations
+    |            ├── formatting.py
+    |            └── visualize.py
+    |
+    └── tests 
+    
 --------
 
 Project structure is based on the [cookiecutter data science project template](https://drivendata.github.io/cookiecutter-data-science/).
@@ -96,10 +100,7 @@ pip install -e .
 ## Config file
 
 To run the training script, you also need a toml file called `training_config.toml`
-with training configuration parameters. The file `training_config_TEMPLATE.toml`
-is a template for this.  
-**NOTE: This will probably be changed in later versions, see issues [6](https://github.com/ybracke/transnormer/issues/6) and [7](https://github.com/ybracke/transnormer/issues/7)**
-
+with training configuration parameters.
 
 ## Usage
 
@@ -138,7 +139,7 @@ lexical normalization.
 
 ## Background
 
-**[Perhaps this should go somewhere else, e.g. into `./references`]**
+See pads in the [wiki](https://github.com/ybracke/transnormer/wiki)
 
 ### References
 
