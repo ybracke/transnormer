@@ -12,10 +12,10 @@ from transnormer.data import loader
 
 
 # logging.basicConfig(
-#     filename='tests/testlogs/test.log', 
+#     filename='tests/testlogs/test.log',
 #     level=logging.INFO,
 #     format='%(asctime)s - %(message)s',
-#     datefmt='%Y-%m-%d %H:%M:%S'              
+#     datefmt='%Y-%m-%d %H:%M:%S'
 # )
 
 LOGGER = logging.getLogger(__name__)
@@ -62,9 +62,7 @@ def test_tokenize_input_and_output_single_tokenizer():
     dataset = loader.load_dtaeval_as_dataset(path)
 
     # Load tokenizers
-    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
-        "google/byt5-small"
-    )
+    tokenizer_input = transformers.AutoTokenizer.from_pretrained("google/byt5-small")
     tokenizer_labels = tokenizer_input
 
     # Parameters for tokenizing input and labels
@@ -87,7 +85,6 @@ def test_tokenize_input_and_output_single_tokenizer():
     assert len(prepared_dataset[0]["input_ids"]) == 512
     assert len(prepared_dataset[0]["attention_mask"]) == 512
     assert len(prepared_dataset[0]["labels"]) == 512
-
 
 
 def test_config_file_structure():
@@ -152,7 +149,7 @@ def test_config_file_structure():
         CONFIGS = tomli.load(fp)
 
     # Remove certain keys if input CONFIG has a (byte-based) encoder-decoder
-    # as model 
+    # as model
     try:
         if "checkpoint_encoder_decoder" in CONFIGS["language_models"]:
             CONFIGS.pop("language_models")
@@ -435,6 +432,7 @@ def test_tokenize_datasets():
     assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
     assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
 
+
 def test_tokenize_datasets_single_tokenizer():
     CONFIGS = {
         "gpu": "cuda:0",
@@ -470,9 +468,7 @@ def test_tokenize_datasets_single_tokenizer():
             "max_length_input": 512,
             "max_length_output": 512,
         },
-        "language_models": {
-            "checkpoint_encoder_decoder": "google/byt5-small"
-        },
+        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
         # The following configs don't matter ...
         "training_hyperparams": {
             "batch_size": 10,
@@ -636,6 +632,7 @@ def test_warmstart_seq2seq_model_single_model():
     assert model.config.num_beams == 4
     assert model.config.max_length == 128
 
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="training requires cuda")
 def test_train_seq2seq_model():
     CONFIGS = {
@@ -680,7 +677,7 @@ def test_train_seq2seq_model():
         "training_hyperparams": {
             "batch_size": 1,
             "epochs": 1,
-            "logging_steps" : 1,
+            "logging_steps": 1,
             "eval_steps": 1,
             "eval_strategy": "steps",
             "save_steps": 1,
@@ -736,7 +733,7 @@ def test_train_seq2seq_model_single_model():
                 # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
             "paths_test": [
-                 "tests/testdata/jsonl/ascii-reverse.jsonl",
+                "tests/testdata/jsonl/ascii-reverse.jsonl",
                 # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
             "n_examples_train": [
@@ -762,7 +759,7 @@ def test_train_seq2seq_model_single_model():
             "eval_steps": 100,
             "eval_strategy": "steps",
             "save_steps": 100,
-            "fp16": False,    ### !!! Important
+            "fp16": False,  # set to False for byT5-based models
         },
         "beam_search_decoding": {
             "no_repeat_ngram_size": 3,
@@ -801,7 +798,7 @@ def test_train_seq2seq_model_single_model():
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
         save_steps=configs["training_hyperparams"]["save_steps"],
         # gradient_accumulation_steps=2, # crusher-specific
-        # optim="adafactor", # crusher-specific 
+        # optim="adafactor", # crusher-specific
         # learning_rate=2e-5, # from https://github.com/huggingface/notebooks/blob/main/examples/summarization.ipynb
         # weight_decay=0.01, # from https://github.com/huggingface/notebooks/blob/main/examples/summarization.ipynb
     )
@@ -818,7 +815,9 @@ def test_train_seq2seq_model_single_model():
 
     # Have any parameters changed during training?
     unequal_states = []
-    for (name_mo, params_mo), (name_mn, params_mn) in zip(state_dict_model_previously.items(), model.state_dict().items()):
+    for (name_mo, params_mo), (name_mn, params_mn) in zip(
+        state_dict_model_previously.items(), model.state_dict().items()
+    ):
         assert name_mo == name_mn
         if not torch.equal(params_mo, params_mn):
             unequal_states.append(name_mo)
@@ -832,4 +831,3 @@ def test_train_seq2seq_model_single_model():
     # print(f"Model generated: {model.generate(**batch_without_labels, num_beams=2, early_stopping=True, max_length=128)}")
 
     return None
-
