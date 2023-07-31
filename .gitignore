@@ -98,3 +98,5 @@ models/*
 
 # Don't track the template for training configuration file
 training_config_template.toml
+
+hidden/

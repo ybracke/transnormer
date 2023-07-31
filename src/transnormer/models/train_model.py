@@ -1,8 +1,8 @@
-from datetime import datetime
+# from datetime import datetime
 import os
 import random
 import shutil
-import time
+# import time
 import tomli
 
 from typing import Dict, Any, Tuple
@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple
 import datasets
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 import transformers
 from transnormer.data import loader
 from transnormer.preprocess import translit
@@ -67,23 +67,31 @@ def tokenize_datasets(
     Also returns the loaded input and output tokenizers.
     """
 
-    # (1.1) Load input tokenizer
-    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
-        configs["language_models"]["checkpoint_encoder"]
-    )
-    # (1.2) Optional: replace tokenizer's normalization component with a custom transliterator
-    if "input_transliterator" in configs["tokenizer"]:
-        if configs["tokenizer"]["input_transliterator"] == "Transliterator1":
-            transliterator = translit.Transliterator1()
-        else:
-            transliterator = None
-        tokenizer_input = translit.exchange_transliterator(
-            tokenizer_input, transliterator
+    # (1) Load tokenizers
+    if "checkpoint_encoder_decoder" in configs["language_models"]:
+        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+            configs["language_models"]["checkpoint_encoder_decoder"]
         )
-    # (2) Load output tokenizer
-    tokenizer_output = transformers.AutoTokenizer.from_pretrained(
-        configs["language_models"]["checkpoint_decoder"]
-    )
+        # Output tokenizer is simply a reference to input tok
+        tokenizer_output = tokenizer_input
+    else:
+        # (1.1) Load input tokenizer
+        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+            configs["language_models"]["checkpoint_encoder"]
+        )
+        # (1.2) Optional: replace tokenizer's normalization component with a custom transliterator
+        if "input_transliterator" in configs["tokenizer"]:
+            if configs["tokenizer"]["input_transliterator"] == "Transliterator1":
+                transliterator = translit.Transliterator1()
+            else:
+                transliterator = None
+            tokenizer_input = translit.exchange_transliterator(
+                tokenizer_input, transliterator
+            )
+        # (1.3) Load output tokenizer
+        tokenizer_output = transformers.AutoTokenizer.from_pretrained(
+            configs["language_models"]["checkpoint_decoder"]
+        )
 
     # (3) Define tokenization keyword arguments
     tokenization_kwargs = {
@@ -163,15 +171,27 @@ def warmstart_seq2seq_model(
     Load and configure an encoder-decoder model.
     """
 
-    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-        configs["language_models"]["checkpoint_encoder"],
-        configs["language_models"]["checkpoint_decoder"],
-    ).to(device)
+    if "checkpoint_encoder_decoder" in configs["language_models"]:
+        # TODO: the following is hacky because it only allows a T5-model as encoder_decoder
+        model = transformers.T5ForConditionalGeneration.from_pretrained(
+            configs["language_models"]["checkpoint_encoder_decoder"],
+        ).to(device)
+    else:
+        model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
+            configs["language_models"]["checkpoint_encoder"],
+            configs["language_models"]["checkpoint_decoder"],
+        ).to(device)
 
     # Setting the special tokens
-    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
-    model.config.eos_token_id = tokenizer_output.sep_token_id
-    model.config.pad_token_id = tokenizer_output.pad_token_id
+    if "checkpoint_encoder_decoder" in configs["language_models"]:
+        # TODO: the following is hacky because it only allows a T5-model as encoder_decoder
+        model.config.decoder_start_token_id = tokenizer_output.pad_token_id
+        model.config.eos_token_id = tokenizer_output.eos_token_id
+        model.config.pad_token_id = tokenizer_output.pad_token_id
+    else:
+        model.config.decoder_start_token_id = tokenizer_output.cls_token_id
+        model.config.eos_token_id = tokenizer_output.sep_token_id
+        model.config.pad_token_id = tokenizer_output.pad_token_id
 
     # Params for beam search decoding
     model.config.max_length = configs["tokenizer"]["max_length_output"]
@@ -208,6 +228,7 @@ def train_seq2seq_model(
         per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
         save_steps=configs["training_hyperparams"]["save_steps"],
+        logging_steps=configs["training_hyperparams"]["logging_steps"],
     )
 
     # Instantiate trainer
