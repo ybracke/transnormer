@@ -830,4 +830,11 @@ def test_train_seq2seq_model_single_model():
     # print("Input:", batch_without_labels["input_ids"])
     # print(f"Model generated: {model.generate(**batch_without_labels, num_beams=2, early_stopping=True, max_length=128)}")
 
+    # Remove files that were created during training
+    for root, dirs, files in os.walk(output_dir, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        else:
+            os.rmdir(root)
+
     return None
