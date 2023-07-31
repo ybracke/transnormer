@@ -2,9 +2,9 @@
 -e .
 
 # external requirements
-datasets==2.8.0
-lxml==4.9.2
-matplotlib==3.6.3
-nltk==3.8.1
-tomli==2.0.1
-transformers==4.26.0
+datasets>=2.8.0
+lxml>=4.9.2
+matplotlib>=3.6.3
+nltk>=3.8.1
+tomli>=2.0.1
+transformers[torch]>=4.30.0
