@@ -10,13 +10,13 @@ applying a model and inspecting and evaluating a model's performance.
 ## Project Organization
 
     ├── LICENSE
-    ├── README.md          
-    ├── requirements.txt   
-    ├── requirements-dev.txt   
-    ├── pyproject.toml     <- makes project pip installable 
+    ├── README.md
+    ├── requirements.txt
+    ├── requirements-dev.txt
+    ├── pyproject.toml     <- makes project pip installable
     ├── training_config.toml <- Configurations for training
     |
-    ├── data                  
+    ├── data
     │   ├── external       <- Data from third party sources.
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
@@ -31,8 +31,8 @@ applying a model and inspecting and evaluating a model's performance.
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures        <- Generated graphics and figures to be used in reporting
     │
-    └── src                <- Source code for use in this project. 
-    |    └── transnormer        
+    └── src                <- Source code for use in this project.
+    |    └── transnormer
     |        ├── __init__.py    <- Makes src a Python module
     |        │
     |        ├── data           <- to download or generate data
@@ -54,8 +54,8 @@ applying a model and inspecting and evaluating a model's performance.
     |            ├── formatting.py
     |            └── visualize.py
     |
-    └── tests 
-    
+    └── tests
+
 --------
 
 Project structure is based on the [cookiecutter data science project template](https://drivendata.github.io/cookiecutter-data-science/).
@@ -75,19 +75,19 @@ conda install -y cudatoolkit=11.3.1 cudnn=8.3.2 -c conda-forge
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 pip install torch==1.12.1+cu113 torchvision torchaudio -f https://download.pytorch.org/whl/torch_stable.html
 
-# Install dependencies 
+# Install dependencies
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
 # and/or install the transnormer package (-e for editable mode)
-pip install -e . 
+pip install -e .
 ```
 
 **Hints**
 
 * Do `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning
   messages (see `stdout-with-erros.md`)
-* If you use the `Trainer()`, do `export CUDA_VISIBLE_DEVICES=1` and 
+* If you use the `Trainer()`, do `export CUDA_VISIBLE_DEVICES=1` and
   `gpu =  "cuda:0"` in config file. Otherwise it will use both GPUs automatically.
 
 
@@ -112,15 +112,15 @@ python3 model_train.py
 ```
 
 
-## Intuition 
+## Intuition
 
 Historical text normalization is treated as a seq2seq task, like machine
 translation. We use a transformer encoder-decoder model. The encoder-decoder
 gets warm-started with pre-trained models and fine-tuned on a dataset for
-lexical normalization. 
+lexical normalization.
 
-1. Encoder for historic German 
-2. Decoder for modern German 
+1. Encoder for historic German
+2. Decoder for modern German
 3. Encoder-decoder wired together
    * Supervised learning with labeled data
 
@@ -148,18 +148,18 @@ See pads in the [wiki](https://github.com/ybracke/transnormer/wiki)
 * Paper ["Leveraging Pre-trained Checkpoints for Sequence Generation Tasks"](https://arxiv.org/abs/1907.12461)
 
 
-## DVC 
+## DVC
 
 This project uses [DVC](https://dvc.org/doc) for (1) versioning data and model
-files (2) tracking experiments. 
+files (2) tracking experiments.
 
 ### Versioning data and models
 
 Large data and model files are versioned with DVC and do not get tracked by git.
 Instead, only a hash (stored in a text file) is tracked by git, either in a
-`<dataname>.dvc` or in `dvc.lock` are tracked by git. 
+`<dataname>.dvc` or in `dvc.lock` are tracked by git.
 
-`dvc list . --dvc-only --recursive`  
+`dvc list . --dvc-only --recursive`
 -> shows the files tracked by DVC
 
 `dvc push` moves a specific version of the data to the remote storage.
@@ -178,16 +178,16 @@ possibly evaluation metrics at a specific point in time.
 2. Set parameters in the config file (`training_config.toml`)
 3. Make sure `dvc.yaml` is still up-to-date (i.e. contains all dependencies,
   parameters, output locations, etc.)
-4. Run the training with `dvc exp run` 
+4. Run the training with `dvc exp run`
    * You can also set parameters in the config file at this stage with
-     `--set-params|-S`. Example:   
+     `--set-params|-S`. Example:
      `dvc exp run -S 'training_config.toml:training_hyperparams.save_steps=50'`)
-5. Do `dvc exp run [--name <exp-name>]`   
-   (1) creates a new version of the model;   
+5. Do `dvc exp run [--name <exp-name>]`
+   (1) creates a new version of the model;
    (2) modifies `dvc.lock`. Instead of an individual `model.dvc` file for the
-  model, its path, md5, etc. are stored in `dvc.lock` under `outs`;  
+  model, its path, md5, etc. are stored in `dvc.lock` under `outs`;
   (3) creates a hidden commit that also contains the config and `dvc.lock` (i.e.
-  a link to the updated model).  
+  a link to the updated model).
 6. To push the new model version to the remote, do: `dvc push models/model`.
 7. `git restore .` will restore the updated `dvc.lock` and config files. You
    don't have to git-commit these separately to git because this was already done
@@ -203,7 +203,7 @@ possibly evaluation metrics at a specific point in time.
    the experiment branch will be in the state as it was at the time of running
    the experiment.)
 2. The experiment branch can now be used to analyze the model by running
-   inspection notebooks.  
+   inspection notebooks.
 3. Push the experiment branch to remote in order to be able to look at the
    analyses notebooks on GitHub. Remove the experiment branch from remote or
    alltogether if they are not needed them anymore (they can be recreated, see
