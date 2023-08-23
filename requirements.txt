@@ -8,3 +8,4 @@ matplotlib>=3.6.3
 nltk>=3.8.1
 tomli>=2.0.1
 transformers[torch]>=4.30.0
+python_Levenshtein==0.21.1
