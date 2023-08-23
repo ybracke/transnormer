@@ -1,0 +1,32 @@
+# -*- coding = utf-8 -*-
+
+# Select GPU
+gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
+
+# Random seed (fix for reproducibility)
+random_seed = 33
+
+[data]
+path_test = "/home/bracke/code/transnormer/data/interim/0_TEST/0_TEST.jsonl"
+n_examples_test = 6
+
+[tokenizer]
+checkpoint_in = "dbmdz/bert-base-historic-multilingual-cased"
+checkpoint_out = "bert-base-multilingual-cased"
+# padding = true
+# truncation = true
+max_length_input = 256
+max_length_output = 256
+input_transliterator = "Transliterator1"
+
+[model]
+checkpoint =  "/home/bracke/code/transnormer/models/models_2023-03-09_17-09/checkpoint-250000"
+
+[generation]
+batch_size = 8
+
+[beam_search_decoding]
+# no_repeat_ngram_size = 3
+early_stopping = true
+length_penalty = 2.0
+num_beams = 4
