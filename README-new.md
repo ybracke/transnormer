@@ -4,7 +4,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
 
 ## Installation
 
-### 1. Set up environment 
+### 1. Set up environment
 
 #### 1.a On a GPU
 
@@ -74,7 +74,7 @@ conda activate <environment-name>
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 ```
 
-* If you have multiple GPUs available and want to use only one (here: the GPU with index `1`): 
+* If you have multiple GPUs available and want to use only one (here: the GPU with index `1`):
   * `export CUDA_VISIBLE_DEVICES=1`
   * Set `gpu = "cuda:0"` in [config file](#1-select-gpu)
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
@@ -82,7 +82,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 ### Configuration
 
-The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters. 
+The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
 
 Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
 
@@ -98,8 +98,8 @@ The `random_seed` parameter defines a fixed random seed (`42` in the default set
 
 #### 3. Data Paths and Subset Sizes
 
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.  
-Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied. 
+The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
 #### 4. Tokenizer Configuration
 
@@ -121,7 +121,7 @@ The `[beam_search_decoding]` section contains parameters related to beam search 
 
 ### Data processing
 
-Scripts and functions in `src/transnormer/data` 
+Scripts and functions in `src/transnormer/data`
 
 TODO - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
 
@@ -179,7 +179,9 @@ In order to support reading in and converting a dataset to be used as training o
 
 ### Prediction (Normalization)
 
-TODO - Describe notebooks
+`notebooks/exploratory/inspect_predictions.ipynb`
+
+This notebook should only be used to generate predictions on git branches created from a dvc experiment. On the main/dev branch this notebook will only be updated when changes to the code are necessary, but it will not be used to generate predictions there.
 
 ### Evaluation
 
@@ -224,7 +226,7 @@ This project contains some changes compared to CAB.
 * Machine learning should help to find better normalizations for unknown texts and contexts.
 * By using pre-trained transformer models we can leverage linguistic knowledge from large quantities of data
 
-##### Sequence-to-sequence 
+##### Sequence-to-sequence
 
 The models trained with this project are sequence-to-sequence models (see [above](TODO)). This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where each token is assigned a single label ().
 
@@ -277,7 +279,7 @@ Instead, only a hash (stored in a text file) is tracked by git, either in a
 DVC is also used for tracking experiments to make models reproducible and to
 separate code development from experiments. Each DVC experiment is a snapshot of
 the state of the code, the configs, the trained model resulting from these, and
-possibly evaluation metrics at a specific point in time. 
+possibly evaluation metrics at a specific point in time.
 
 ##### Workflow: Run experiment
 
