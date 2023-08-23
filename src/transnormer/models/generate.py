@@ -118,7 +118,9 @@ def tokenize_datasets(
 def parse_and_check_arguments(
     arguments: Optional[List[str]] = None,
 ) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="TODO")  # TODO
+    parser = argparse.ArgumentParser(
+        description="Generates normalizations given a configuration file that specifies the model, the data and parameters."
+    )
 
     # TODO: allow to overwrite configs on command-line?
     parser.add_argument(
