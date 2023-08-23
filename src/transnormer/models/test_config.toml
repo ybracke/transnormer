@@ -6,14 +6,9 @@ gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 # Random seed (fix for reproducibility)
 random_seed = 33
 
-# Data
 [data]
-paths_test = [
-    "/home/bracke/code/transnormer/data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
-    ]
-n_examples_test = [
-    3,
-    ]
+path_test = "/home/bracke/code/transnormer/data/interim/0_TEST/0_TEST.jsonl"
+n_examples_test = 6
 
 [tokenizer]
 checkpoint_in = "dbmdz/bert-base-historic-multilingual-cased"
@@ -24,21 +19,14 @@ max_length_input = 256
 max_length_output = 256
 input_transliterator = "Transliterator1"
 
-# Model
 [model]
-checkpoint = "/home/bracke/code/transnormer/models/models_2023-03-09_17-09/checkpoint-250000"
+checkpoint =  "/home/bracke/code/transnormer/models/models_2023-03-09_17-09/checkpoint-250000"
 
 [generation]
 batch_size = 8
 
-
-# ???
-# Params for beam search decoding
-# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/transformers/v4.10.1/main_classes/model.html
-# These initial parameters were copied from
-# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
 [beam_search_decoding]
-no_repeat_ngram_size = 3
+# no_repeat_ngram_size = 3
 early_stopping = true
 length_penalty = 2.0
 num_beams = 4

@@ -120,27 +120,12 @@ def parse_and_check_arguments(
 ) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="TODO")  # TODO
 
-    # parser.add_argument(
-    #     "-m",
-    #     "--model",
-    #     required=True,
-    #     help="Path to the model file",
-    # )
+    # TODO: allow to overwrite configs on command-line?
     parser.add_argument(
         "-c",
         "--config",
         help="Path to the config file (TOML)",
     )
-    # parser.add_argument(
-    #     "-d",
-    #     "--data",
-    #     help="Path to the input data (JSONL)",
-    # )
-    # parser.add_argument(
-    #     "-n",
-    #     "--n-examples",
-    #     help="Number of (randomly selected) examples from the data file",
-    # )
     parser.add_argument(
         "-o",
         "--out",
@@ -167,15 +152,20 @@ def main(arguments: Optional[List[str]] = None) -> None:
     # GPU set-up
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
 
-    # Load data
-    paths = CONFIGS["data"]["paths_test"]
-    data_files = {f"{i}": path for i, path in enumerate(paths)}
-    ds = datasets.load_dataset("json", data_files=data_files)
+    path = CONFIGS["data"]["path_test"]
+    ds = datasets.load_dataset("json", data_files=path)
 
     # Take only N examples
-    ns_examples = CONFIGS["data"]["n_examples_test"]
-    for i, n in enumerate(ns_examples):
-        ds[f"{i}"] = ds[f"{i}"].shuffle().select(range(n))
+    n = CONFIGS["data"]["n_examples_test"]
+    # NB: "train" is the default dataset name assigned
+    ds["train"] = ds["train"].shuffle().select(range(n))
+
+    # FIXME: Remove and rename columns (for 0_TEST)
+    ds["train"] = ds["train"].remove_columns(
+        ["author", "basename", "title", "date", "genre", "norm", "par_id", "done"]
+    )
+    ds["train"] = ds["train"].rename_column("text", "orig")
+    ds["train"] = ds["train"].rename_column("norm_manual", "norm")
 
     # Tokenize data
     prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(ds, CONFIGS)
@@ -184,8 +174,13 @@ def main(arguments: Optional[List[str]] = None) -> None:
     checkpoint = CONFIGS["model"]["checkpoint"]
     model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
 
+    # Parameters for model output
+    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
+    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
+    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
+    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
+
     # Generate
-    # TODO: Do we have to include a configuration for beam search decoding here?
     def generate_normalization(batch):
         inputs = tokenizer_input(
             batch["orig"],
@@ -211,17 +206,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
         load_from_cache_file=False,
     )
 
-    df = pd.DataFrame(
-        data={
-            "orig": ds["0"]["orig"],
-            "gold": ds["0"]["norm"],
-            "pred": ds["0"]["pred"],
-        }
-    )
-
-    df.to_json(args.out, force_ascii=False)
-
-    pass
+    ds["train"].to_json(args.out, force_ascii=False)
 
 
 if __name__ == "__main__":
