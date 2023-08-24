@@ -55,9 +55,29 @@ To train a model you need the following resources:
 * Encoder and decoder models (available on the [Huggingface Model Hub](huggingface.co/models))
 * Tokenizers that belong to the models (also available via Huggingface)
 * A dataset of historical language documents with (gold-)normalized labels
-* A file specifying the training configurations, see [Configuration](#configuration)
+* A file specifying the training configurations, see [Training config file](#training-config-file)
+
 
 ## Usage
+
+### Quickstart
+
+1. Prepare environment (see [below](#preparation-1-virtual-environment))
+2. Prepare data (see [below](#preparation-2-data-preprocessing))
+
+#### Quickstart Training
+
+1. Specify the training parameters in the [training config file](#training-config-file)
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`.
+
+For more details, see [below](#1-model-training)
+
+#### Quickstart Evaluation
+
+1. Specify the test/generation parameters in the [test config file](#test-config-file)
+2. Run generation script: `$ python3 src/transnormer/models/generate.py -c test_config.toml -o <path-generations>`. This produces at JSONL file with generated normalizations at `<path-generations>`.
+3. Run evaluation script: `$ src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file <path-generations> --pred-file <path-generations> --ref-field=<name-gold> --pred-field=<name-pred> -a both`. This will print the evaluation metrics to stdout. In this example, it is assumed that `<path-generations>` contains both the gold and automatically generated normalizations (in the fields `name-gold` and `name-pred`, respectively).
+
 
 ### Preparation 1: Virtual environment
 
@@ -135,10 +155,13 @@ In order to support reading in and converting a dataset to be used as training o
 
 ### 1. Model training
 
-1. Specify the training parameters in the [config file](#configuration)
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment (see [Installation](#installation)) first.)
+1. Specify the training parameters in the [config file](#training-config-file)
 
-#### Configuration
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
+If you are using [`dvc`](#dvc) to track experiments: `$ nohup nice exp run --name <experiment-name> train &`, where `train` is the stage name for the training from `dvc.yaml` in the cwd. If you omit `train`, all stages are run.
+
+
+#### Training config file
 
 The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
 
@@ -179,7 +202,7 @@ The `[beam_search_decoding]` section contains parameters related to beam search 
 
 ### 2. Generating normalizations
 
-The script `src/transnormer/models/generate.py` generates normalizations.
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file).
 
 ```
 usage: generate.py [-h] [-c CONFIG] [-o OUT]
@@ -198,6 +221,13 @@ Example call:
 ```
 python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
 ```
+
+#### Test config file
+
+**TODO**
+
+Refer to `test_config.toml` for a template. The format is similar to the [training config file](#training-config-file), but (currently) allows only a single test data file as input.
+
 
 
 ### 3. Evaluation
