@@ -55,11 +55,31 @@ To train a model you need the following resources:
 * Encoder and decoder models (available on the [Huggingface Model Hub](huggingface.co/models))
 * Tokenizers that belong to the models (also available via Huggingface)
 * A dataset of historical language documents with (gold-)normalized labels
-* A file specifying the training configurations, see [Configuration](#configuration)
+* A file specifying the training configurations, see [Training config file](#training-config-file)
+
 
 ## Usage
 
-### Activate virtual environment
+### Quickstart
+
+1. Prepare environment (see [below](#preparation-1-virtual-environment))
+2. Prepare data (see [below](#preparation-2-data-preprocessing))
+
+#### Quickstart Training
+
+1. Specify the training parameters in the [training config file](#training-config-file)
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`.
+
+For more details, see [below](#1-model-training)
+
+#### Quickstart Evaluation
+
+1. Specify the test/generation parameters in the [test config file](#test-config-file)
+2. Run generation script: `$ python3 src/transnormer/models/generate.py -c test_config.toml -o <path-generations>`. This produces at JSONL file with generated normalizations at `<path-generations>`.
+3. Run evaluation script: `$ src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file <path-generations> --pred-file <path-generations> --ref-field=<name-gold> --pred-field=<name-pred> -a both`. This will print the evaluation metrics to stdout. In this example, it is assumed that `<path-generations>` contains both the gold and automatically generated normalizations (in the fields `name-gold` and `name-pred`, respectively).
+
+
+### Preparation 1: Virtual environment
 
 #### `venv`
 
@@ -80,46 +100,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
 
 
-### Configuration
-
-The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
-
-Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
-
-The following paragraphs provide detailed explanations of each section and parameter within the configuration file to facilitate effective model training.
-
-#### 1. Select GPU
-
-The `gpu` parameter allows you to specify the GPU device for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand using if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
-
-#### 2. Random Seed (Reproducibility)
-
-The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. This enables consistent results across different runs.
-
-#### 3. Data Paths and Subset Sizes
-
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
-Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
-
-#### 4. Tokenizer Configuration
-
-The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can adjust `max_length_input` and `max_length_output` to define the maximum token lengths for input and output sequences. This section also provides the option to specify an `input_transliterator` for transliteration purposes.
-
-#### 5. Language Model Selection
-
-Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
-This section may change in the near future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
-
-
-#### 6. Training Hyperparameters
-
-The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), and `learning_rate`. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
-
-#### 7. Beam Search Decoding Parameters
-
-The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
-
-### Data processing
+### Preparation 2: Data preprocessing
 
 Scripts and functions in `src/transnormer/data`
 
@@ -172,20 +153,130 @@ In order to support reading in and converting a dataset to be used as training o
 `{ "orig" : List[str], "norm" : List[str]}`. Additional dict entries might be metadata, e.g. `"year" : List[int]`, `"document" : List[str]`.
 
 
-### Model training
+### 1. Model training
 
-1. Specify the training parameters in the [config file](#configuration)
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment (see [Installation](#installation)) first.)
+1. Specify the training parameters in the [config file](#training-config-file)
 
-### Prediction (Normalization)
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
+If you are using [`dvc`](#dvc) to track experiments: `$ nohup nice exp run --name <experiment-name> train &`, where `train` is the stage name for the training from `dvc.yaml` in the cwd. If you omit `train`, all stages are run.
 
-`notebooks/exploratory/inspect_predictions.ipynb`
 
-This notebook should only be used to generate predictions on git branches created from a dvc experiment. On the main/dev branch this notebook will only be updated when changes to the code are necessary, but it will not be used to generate predictions there.
+#### Training config file
 
-### Evaluation
+The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
 
-TODO
+Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
+
+The following paragraphs provide detailed explanations of each section and parameter within the configuration file to facilitate effective model training.
+
+##### 1. Select GPU
+
+The `gpu` parameter allows you to specify the GPU device for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand using if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
+
+##### 2. Random Seed (Reproducibility)
+
+The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. This enables consistent results across different runs.
+
+##### 3. Data Paths and Subset Sizes
+
+The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
+
+##### 4. Tokenizer Configuration
+
+The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can adjust `max_length_input` and `max_length_output` to define the maximum token lengths for input and output sequences. This section also provides the option to specify an `input_transliterator` for transliteration purposes.
+
+##### 5. Language Model Selection
+
+Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
+This section may change in the near future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
+
+
+##### 6. Training Hyperparameters
+
+The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), and `learning_rate`. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
+
+##### 7. Beam Search Decoding Parameters
+
+The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
+
+### 2. Generating normalizations
+
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file).
+
+```
+usage: generate.py [-h] [-c CONFIG] [-o OUT]
+
+Generates normalizations given a configuration file that specifies the model, the data and parameters.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        Path to the config file (TOML)
+  -o OUT, --out OUT     Path to the output file (JSONL)
+```
+
+Example call:
+
+```
+python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
+```
+
+#### Test config file
+
+**TODO**
+
+Refer to `test_config.toml` for a template. The format is similar to the [training config file](#training-config-file), but (currently) allows only a single test data file as input.
+
+
+
+### 3. Evaluation
+
+#### 3.1 Metrics
+
+The script `src/transnormer/evaluation/evaluate.py` computes an accuracy score and the normalized Levenshtein distance.
+
+```
+usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
+                   [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES
+
+Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-type=both for a harmonized accuracy score.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --input-type {jsonl,text}
+                        Type of input files: jsonl or text
+  --ref-file REF_FILE   Path to the input file containing reference normalizations (typically a gold
+                        standard)
+  --pred-file PRED_FILE
+                        Path to the input file containing predicted normalizations
+  --ref-field REF_FIELD
+                        Name of the field containing reference (for jsonl input)
+  --pred-field PRED_FIELD
+                        Name of the field containing prediction (for jsonl input)
+  -a ALIGN_TYPES, --align-types ALIGN_TYPES
+                        Which file's tokenisation to use as reference for alignment. Valid choices are
+                        'both', 'ref', 'pred'. Multiple choices are possible (comma separated)
+```
+
+
+Example call:
+
+```
+python3 src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file hidden/output/out02.jsonl --pred-file hidden/output/out02.jsonl --ref-field=norm --pred-field=pred -a ref,pred,both >> hidden/eval.jsonl
+```
+
+In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If they are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
+
+
+#### 3.2 Inspecting and analyzing outputs
+
+**TODO**
+
+* Generations (or "predictions") were previously created with this Jupyter notebook: `notebooks/exploratory/inspect_predictions.ipynb`
+* Now that generating normalizations is handled elsewhere, the notebook should be updated so that it reads in JSONL files containing fields like "orig", "gold" and "pred" and applies the analysis functions
+* Could [Meld](https://meldmerge.org/) be helpful for a visual comparison of orig, gold and pred?
+
 
 ## Background
 
