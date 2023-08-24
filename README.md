@@ -2,11 +2,47 @@
 
 A lexical normalizer for historical spelling variants using a transformer architecture.
 
+
+- [`transnormer`](#transnormer)
+  - [Installation](#installation)
+    - [1. Set up environment](#1-set-up-environment)
+    - [2.a Install package from GitHub](#2a-install-package-from-github)
+    - [2.b Editable install for developers](#2b-editable-install-for-developers)
+    - [3. Requirements](#3-requirements)
+  - [Usage](#usage)
+    - [Quickstart](#quickstart)
+      - [Quickstart Training](#quickstart-training)
+      - [Quickstart Evaluation](#quickstart-evaluation)
+    - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
+    - [Preparation 2: Data preprocessing](#preparation-2-data-preprocessing)
+    - [1. Model training](#1-model-training)
+      - [Training config file](#training-config-file)
+    - [2. Generating normalizations](#2-generating-normalizations)
+      - [Test config file](#test-config-file)
+    - [3. Evaluation](#3-evaluation)
+      - [3.1 Metrics](#31-metrics)
+      - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
+  - [Background](#background)
+    - [Text+](#text)
+    - [Description](#description)
+    - [CAB](#cab)
+      - [`transnormer` vs. CAB](#transnormer-vs-cab)
+    - [Roadmap](#roadmap)
+    - [More info](#more-info)
+  - [Development](#development)
+    - [Contributing](#contributing)
+    - [Testing](#testing)
+    - [DVC](#dvc)
+      - [Versioning data and models](#versioning-data-and-models)
+      - [Tracking experiments](#tracking-experiments)
+  - [License](#license)
+
+
 ## Installation
 
 ### 1. Set up environment
 
-#### 1.a On a GPU
+#### 1.a On a GPU <!-- omit in toc -->
 
 If you have a GPU available, you should first install and set up a conda environment.
 
@@ -20,7 +56,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 pip install torch==1.12.1+cu113 torchvision torchaudio -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
-#### 1.b On a CPU
+#### 1.b On a CPU <!-- omit in toc -->
 
 Set up a virtual environment, e.g. like this
 
@@ -81,13 +117,13 @@ For more details, see [below](#1-model-training)
 
 ### Preparation 1: Virtual environment
 
-#### `venv`
+#### `venv` <!-- omit in toc -->
 
 ```bash
 source .venv/bin/activate
 ```
 
-#### Conda
+#### Conda <!-- omit in toc -->
 
 ```bash
 conda activate <environment-name>
@@ -107,7 +143,7 @@ Scripts and functions in `src/transnormer/data`
 TODO - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
 
 
-#### `split_dataset.py`
+#### `split_dataset.py` <!-- omit in toc -->
 
 ```
 usage: split_dataset.py [-h] [-o OUT] [-v VALIDATION_SET_SIZE] [-t TEST_SET_SIZE]
@@ -131,7 +167,7 @@ optional arguments:
                         Seed for the random state (default: 42).
 ```
 
-#### `make_dataset.py`
+#### `make_dataset.py` <!-- omit in toc -->
 
 ```
 usage: make_dataset.py [-h] [-t TARGET] DATASET [DATASET ...]
@@ -147,7 +183,7 @@ optional arguments:
                         Path to target directory
 ```
 
-#### `read_*` function
+#### `read_*` function <!-- omit in toc -->
 
 In order to support reading in and converting a dataset to be used as training or test data, there has to be a `read_*` function in `loader.py` (e.g. `read_dtaeval_raw`).The `read_*` function must return a dict that looks like this:
 `{ "orig" : List[str], "norm" : List[str]}`. Additional dict entries might be metadata, e.g. `"year" : List[int]`, `"document" : List[str]`.
@@ -169,34 +205,34 @@ Please note that the provided configuration settings and parameters are examples
 
 The following paragraphs provide detailed explanations of each section and parameter within the configuration file to facilitate effective model training.
 
-##### 1. Select GPU
+##### 1. Select GPU <!-- omit in toc -->
 
 The `gpu` parameter allows you to specify the GPU device for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand using if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
 
-##### 2. Random Seed (Reproducibility)
+##### 2. Random Seed (Reproducibility) <!-- omit in toc -->
 
 The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. This enables consistent results across different runs.
 
-##### 3. Data Paths and Subset Sizes
+##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
 The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
-##### 4. Tokenizer Configuration
+##### 4. Tokenizer Configuration <!-- omit in toc -->
 
 The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can adjust `max_length_input` and `max_length_output` to define the maximum token lengths for input and output sequences. This section also provides the option to specify an `input_transliterator` for transliteration purposes.
 
-##### 5. Language Model Selection
+##### 5. Language Model Selection <!-- omit in toc -->
 
 Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
 This section may change in the near future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
 
 
-##### 6. Training Hyperparameters
+##### 6. Training Hyperparameters <!-- omit in toc -->
 
 The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), and `learning_rate`. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
 
-##### 7. Beam Search Decoding Parameters
+##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
 
 The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
 
@@ -310,27 +346,27 @@ CAB is based on a combination of hand-craftet rules, edit distances and hidden m
 
 This project contains some changes compared to CAB.
 
-##### Machine learning
+##### Machine learning  <!-- omit in toc -->
 
 * Being based on the transformer architecture, this project uses state-of-the-art machine learning technology.
 * Training machine learning models can be continued once more and/or better training data is available, thus allowing a continuous improvement of the models.
 * Machine learning should help to find better normalizations for unknown texts and contexts.
 * By using pre-trained transformer models we can leverage linguistic knowledge from large quantities of data
 
-##### Sequence-to-sequence
+##### Sequence-to-sequence  <!-- omit in toc -->
 
 The models trained with this project are sequence-to-sequence models (see [above](TODO)). This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where each token is assigned a single label ().
 
 Unlike CAB our program can apply re-tokenization (normalizing word separation). TODO: Take more info from [here](https://pad.gwdg.de/KEg0QOHJQUyH5wyyANxHBQ#), tokenization of the output is not contingent of tokenization of historic data
 
-##### Leverage large language models
+##### Leverage large language models  <!-- omit in toc -->
 
 TODO
 
 * Have better knowledge of language
 * Should deal with context better than CAB
 
-##### Maintainability
+##### Maintainability  <!-- omit in toc -->
 
 * We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. Huggingface), instead of in-house developments that are less well supported.
 * We move away from a C- and Perl-based program to a Python-based program, which has a larger community of users and developers.
@@ -372,7 +408,7 @@ separate code development from experiments. Each DVC experiment is a snapshot of
 the state of the code, the configs, the trained model resulting from these, and
 possibly evaluation metrics at a specific point in time.
 
-##### Workflow: Run experiment
+##### Workflow: Run experiment <!-- omit in toc -->
 
 1. Make sure any recent changes to the code are committed
 2. Set parameters in the config file (`training_config.toml`)
@@ -393,7 +429,7 @@ possibly evaluation metrics at a specific point in time.
    don't have to git-commit these separately to git because this was already done
    automatically in step 5.
 
-##### Workflow: Use a model from a specific experiment
+##### Workflow: Use a model from a specific experiment  <!-- omit in toc -->
 
 1. `dvc exp branch <branch-name> <exp-name>` will create a git branch from the
    experiment. It makes sense to give the branch the same name as the
@@ -411,7 +447,7 @@ possibly evaluation metrics at a specific point in time.
 4. You can reproduce the experiment (i.e. train the model again) either on the
    experiment branch or if you did `dvc exp apply <exp-name>` (on branch `dev`).
 
-##### Experiments: Technical details / background
+##### Experiments: Technical details / background  <!-- omit in toc -->
 
 An "experiment" in DVC is a set of changes to your data, code, and configuration
 that you want to track and reproduce. When you run `dvc exp run`, DVC
