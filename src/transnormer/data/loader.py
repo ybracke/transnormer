@@ -315,10 +315,15 @@ def load_data(
             # - Is the match check for the dataset path/name okay like this?
             # - Same question for _find_split
             # - Where/how do the filter_kwargs get passed for filtering certain XML elements
-            filter_kwargs: Dict[str, Union[str, List[str]]] = {}
-            o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
-            dname = "dtaeval"
-            split = _find_split(path)
+            if "xml" in path:
+                filter_kwargs: Dict[str, Union[str, List[str]]] = {}
+                o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
+                dname = "dtaeval-v3.0"
+                split = _find_split(path)
+            elif "json" in path:
+                o = read_dtajsonl_raw(path)
+                dname = "dtaeval-v4.2"
+                split = _find_split(path)
 
         elif "ridges/bollmann-split" in path:
             o = read_ridges_raw(path)
