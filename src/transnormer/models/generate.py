@@ -50,8 +50,8 @@ def tokenize_input_and_output(
     return batch
 
 
-# FIXME: For simplicity I just copied and adjusted this function from train_model.py
-# TODO: Adjust it so that it can be used in both training and prediction
+# TODO: For simplicity I just copied and adjusted this function from train_model.py
+#       Adjust it so that it can be used in both training and prediction
 def tokenize_datasets(
     dataset: datasets.DatasetDict, configs: Dict[str, Any]
 ) -> Tuple[
@@ -157,24 +157,32 @@ def main(arguments: Optional[List[str]] = None) -> None:
     path = CONFIGS["data"]["path_test"]
     ds = datasets.load_dataset("json", data_files=path)
 
-    # Take only N examples
-    n = CONFIGS["data"]["n_examples_test"]
-    # NB: "train" is the default dataset name assigned
-    ds["train"] = ds["train"].shuffle().select(range(n))
+    # Optional: Take only N examples
+    if "n_examples_test" in CONFIGS["data"]:
+        n = CONFIGS["data"]["n_examples_test"]
+        # NB: "train" is the default dataset name assigned
+        ds["train"] = ds["train"].shuffle().select(range(n))
 
-    # FIXME: Remove and rename columns (for 0_TEST)
-    ds["train"] = ds["train"].remove_columns(
-        ["author", "basename", "title", "date", "genre", "norm", "par_id", "done"]
-    )
-    ds["train"] = ds["train"].rename_column("text", "orig")
-    ds["train"] = ds["train"].rename_column("norm_manual", "norm")
+    # FIXME: only for 0_TEST Remove and rename columns
+    # ds["train"] = ds["train"].remove_columns(
+    # ["author", "basename", "title", "date", "genre", "norm", "par_id", "done"]
+    # )
+    # ds["train"] = ds["train"].rename_column("text", "orig")
+    # ds["train"] = ds["train"].rename_column("norm_manual", "norm")
 
     # Tokenize data
     prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(ds, CONFIGS)
 
     # Load model
     checkpoint = CONFIGS["model"]["checkpoint"]
-    model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
+    config = transformers.AutoConfig.from_pretrained(checkpoint)
+    # HOTFIX for using byt5
+    if config.architectures.pop() == "T5ForConditionalGeneration":
+        model = transformers.T5ForConditionalGeneration.from_pretrained(checkpoint).to(
+            device
+        )
+    else:
+        model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
 
     # Parameters for model output
     model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
@@ -204,7 +212,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
     ds = ds.map(
         generate_normalization,
         batched=True,
-        batch_size=8,
+        batch_size=CONFIGS["generation"]["batch_size"],
         load_from_cache_file=False,
     )
 
