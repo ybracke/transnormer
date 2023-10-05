@@ -19,6 +19,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
       - [Training config file](#training-config-file)
     - [2. Generating normalizations](#2-generating-normalizations)
       - [Test config file](#test-config-file)
+      - [Unique names for config and prediction files](#unique-names-for-config-and-prediction-files)
     - [3. Evaluation](#3-evaluation)
       - [3.1 Metrics](#31-metrics)
       - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
@@ -264,6 +265,25 @@ python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
 
 Refer to `test_config.toml` for a template. The format is similar to the [training config file](#training-config-file), but (currently) allows only a single test data file as input.
 
+#### Unique names for config and prediction files
+
+Rename and copy current test_config:
+
+```bash
+# in the transformer directory call
+filename=`md5sum test_config.toml | head -c 8`.toml
+cp test_config.toml hidden/test_configs/$filename
+```
+
+Rename the predictions file (e.g. `hidden/predictions/preds.jsonl`) to a unique name like this:
+
+```bash
+# go to predictions directory
+cd hidden/predictions
+# rename pred file
+filename=`md5sum preds.jsonl | head -c 8`.jsonl
+mv preds.jsonl $filename
+```
 
 
 ### 3. Evaluation
@@ -274,16 +294,17 @@ The script `src/transnormer/evaluation/evaluate.py` computes an accuracy score a
 
 ```
 usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
-                   [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES
+                   [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES [--test-config TEST_CONFIG]
 
-Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-type=both for a harmonized accuracy score.
+
+Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-
+type=both for a harmonized accuracy score.
 
 optional arguments:
   -h, --help            show this help message and exit
   --input-type {jsonl,text}
                         Type of input files: jsonl or text
-  --ref-file REF_FILE   Path to the input file containing reference normalizations (typically a gold
-                        standard)
+  --ref-file REF_FILE   Path to the input file containing reference normalizations (typically a gold standard)
   --pred-file PRED_FILE
                         Path to the input file containing predicted normalizations
   --ref-field REF_FIELD
@@ -291,18 +312,20 @@ optional arguments:
   --pred-field PRED_FIELD
                         Name of the field containing prediction (for jsonl input)
   -a ALIGN_TYPES, --align-types ALIGN_TYPES
-                        Which file's tokenisation to use as reference for alignment. Valid choices are
-                        'both', 'ref', 'pred'. Multiple choices are possible (comma separated)
+                        Which file's tokenisation to use as reference for alignment. Valid choices are 'both',
+                        'ref', 'pred'. Multiple choices are possible (comma separated)
+  --test-config TEST_CONFIG
+                        Path to the file containing the test configurations
 ```
 
 
 Example call:
 
 ```
-python3 src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file hidden/output/out02.jsonl --pred-file hidden/output/out02.jsonl --ref-field=norm --pred-field=pred -a ref,pred,both >> hidden/eval.jsonl
+python3 src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file hidden/predictions/8ae3fd47.jsonl --pred-file hidden/predictions/8ae3fd47.jsonl --ref-field=norm --pred-field=pred -a both --test-config 9a61b7f5.toml >> hidden/eval.jsonl
 ```
 
-In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If they are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
+In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If the two versions (ref and pred) are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
 
 
 #### 3.2 Inspecting and analyzing outputs
@@ -312,6 +335,13 @@ In this case, the gold normalizations ("ref") and auto-generated normalizations 
 * Generations (or "predictions") were previously created with this Jupyter notebook: `notebooks/exploratory/inspect_predictions.ipynb`
 * Now that generating normalizations is handled elsewhere, the notebook should be updated so that it reads in JSONL files containing fields like "orig", "gold" and "pred" and applies the analysis functions
 * Could [Meld](https://meldmerge.org/) be helpful for a visual comparison of orig, gold and pred?
+
+Use `jq` to create a text-only version from the JSONL files containing the predictions and then call `diff` on that. Example:
+```
+jq -r '.norm' ./8ae3fd47.jsonl > norm
+jq -r '.pred' ./8ae3fd47.jsonl > pred
+code --diff norm pred
+```
 
 
 ## Background
