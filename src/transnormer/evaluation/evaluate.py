@@ -79,7 +79,10 @@ def parse_and_check_arguments(
         help="Which file's tokenisation to use as reference for alignment. Valid choices are 'both', 'ref', 'pred'. Multiple choices are possible (comma separated)",
         required=True,
     )
-    # parser.add_argument('-c', '--cache', help='pickle file containing cached alignments', default=None)
+    parser.add_argument(
+        "--test-config",
+        help="Path to the file containing the test configurations",
+    )
 
     args = parser.parse_args(arguments)
 
@@ -111,7 +114,13 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
     metrics = get_metrics(ref, pred, align_types)
 
-    print(json.dumps(metrics))
+    output = {"pred-file": args.pred_file, "ref-file": args.ref_file}
+    if args.test_config:
+        output["test-config"] = args.test_config
+
+    output.update(metrics)
+
+    print(json.dumps(output))
 
     return
 
