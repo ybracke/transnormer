@@ -2,6 +2,7 @@
 import os
 import random
 import shutil
+
 # import time
 import tomli
 
@@ -10,6 +11,7 @@ from typing import Dict, Any, Tuple
 import datasets
 import numpy as np
 import torch
+
 # from torch.utils.data import DataLoader
 import transformers
 from transnormer.data import loader
@@ -148,6 +150,7 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
 
     dataset = ds_split_merged
 
+    # FIXME: isn't this depcrecated?
     # Optional: create smaller datasets from random examples
     if "subset_sizes" in configs:
         train_size = configs["subset_sizes"]["train"]
