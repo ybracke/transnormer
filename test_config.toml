@@ -4,29 +4,29 @@
 gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 
 # Random seed (fix for reproducibility)
-random_seed = 33
+random_seed = 42
 
 [data]
-path_test = "/home/bracke/code/transnormer/data/interim/0_TEST/0_TEST.jsonl"
-n_examples_test = 6
+path_test = "data/interim/0_TEST/2_TEST.jsonl"
+# n_examples_test = 24
 
 [tokenizer]
-checkpoint_in = "dbmdz/bert-base-historic-multilingual-cased"
-checkpoint_out = "bert-base-multilingual-cased"
-# padding = true
-# truncation = true
-max_length_input = 256
-max_length_output = 256
-input_transliterator = "Transliterator1"
+checkpoint_in = "google/byt5-small"
+
+[tokenizer_configs]
+padding="longest" # pad to the longest sequence in batch
+truncation=false
+# max_length = None
 
 [model]
-checkpoint =  "/home/bracke/code/transnormer/models/models_2023-03-09_17-09/checkpoint-250000"
+checkpoint =  "models/models_2023-10-04/checkpoint-24000"
 
 [generation]
 batch_size = 8
 
-[beam_search_decoding]
-# no_repeat_ngram_size = 3
+[generation_config]
+# See here for more options: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+max_new_tokens = 2048
 early_stopping = true
-length_penalty = 2.0
+length_penalty = 2.0 # length_penalty > 0.0 promotes longer sequences
 num_beams = 4

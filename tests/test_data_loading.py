@@ -221,7 +221,7 @@ def test_load_data():
     paths = ["tests/testdata/dtaeval/xml"]
     for i, (dname, split, o) in enumerate(loader.load_data(paths)):
         if i == 0:
-            assert dname == "dtaeval"
+            assert dname == "dtaeval-v3.0"
             assert split == "test"
             assert all(map(lambda x: x in o, ["orig", "norm", "year", "document"]))
             assert len(o["orig"]) > 0
