@@ -39,34 +39,35 @@ def parse_and_check_arguments(
 def main(arguments: Optional[List[str]] = None) -> None:
     args = parse_and_check_arguments(arguments)
 
-    # Load configs
+    # (1) Load configs
     with open(args.config, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
 
-    # Fix seeds for reproducibilty
+    # (2) Preparations
+    # (2.1) Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
     np.random.seed(CONFIGS["random_seed"])
     torch.manual_seed(CONFIGS["random_seed"])
 
-    # GPU set-up
+    # (2.2) GPU set-up
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
 
+    # (3) Data
     path = CONFIGS["data"]["path_test"]
     ds = datasets.load_dataset("json", data_files=path)
 
     # Optional: Take only N examples
     if "n_examples_test" in CONFIGS["data"]:
         n = CONFIGS["data"]["n_examples_test"]
-        # NB: "train" is the default dataset name assigned
+        # Note: "train" is the default dataset name assigned
         ds["train"] = ds["train"].shuffle().select(range(n))
 
     # FIXME: only for 0_TEST Remove and rename columns
-    # ds["train"] = ds["train"].remove_columns(
-    # ["author", "basename", "title", "date", "genre", "norm", "par_id", "done"]
-    # )
+    # ds["train"] = ds["train"].remove_columns(["author", "basename", "title", "date", "genre", "norm", "par_id", "done"])
     # ds["train"] = ds["train"].rename_column("text", "orig")
     # ds["train"] = ds["train"].rename_column("norm_manual", "norm")
 
+    # (4) Tokenizers and transliterator
     # Load tokenizer(s)
     tokenizer_input = transformers.AutoTokenizer.from_pretrained(
         CONFIGS["tokenizer"]["checkpoint_in"]
@@ -89,7 +90,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
             tokenizer_input, transliterator
         )
 
-    # Load model
+    # (5) Load model
     checkpoint = CONFIGS["model"]["checkpoint"]
     config = transformers.AutoConfig.from_pretrained(checkpoint)
     # HOTFIX for using byt5
@@ -100,31 +101,30 @@ def main(arguments: Optional[List[str]] = None) -> None:
     else:
         model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
 
+    # (6) Generation
     # Parameters for model output
-    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
-    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
-    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
-    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
+    gen_cfg = transformers.GenerationConfig(**CONFIGS["generation_config"])
 
-    # Generate
+    # Generation function
     def generate_normalization(batch):
         inputs = tokenizer_input(
             batch["orig"],
-            padding="max_length",
-            truncation=True,
-            max_length=CONFIGS["tokenizer"]["max_length_input"],
+            **CONFIGS["tokenizer_configs"],
             return_tensors="pt",
         )
         input_ids = inputs.input_ids.to(device)
         attention_mask = inputs.attention_mask.to(device)
 
-        outputs = model.generate(input_ids, attention_mask=attention_mask)
+        outputs = model.generate(
+            input_ids, attention_mask=attention_mask, generation_config=gen_cfg
+        )
         output_str = tokenizer_output.batch_decode(outputs, skip_special_tokens=True)
 
         batch["pred"] = output_str
 
         return batch
 
+    # Call generation function
     ds = ds.map(
         generate_normalization,
         batched=True,
@@ -132,6 +132,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
         load_from_cache_file=False,
     )
 
+    # (7) Save outputs
     ds["train"].to_json(args.out, force_ascii=False)
 
 
