@@ -248,8 +248,10 @@ def train_seq2seq_model(
     return None
 
 
+ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
+)
 # TODO pass this on the command-line
-ROOT = "/home/bracke/code/transnormer"
 CONFIGFILE = os.path.join(ROOT, "training_config.toml")
 
 
