@@ -10,6 +10,7 @@ import pandas as pd
 import transformers
 
 from transnormer.preprocess import translit
+from transnormer.data.process import sort_dataset_by_length, shuffle_dataset_in_chunks
 
 
 def parse_and_check_arguments(
@@ -123,6 +124,13 @@ def main(arguments: Optional[List[str]] = None) -> None:
         batch["pred"] = output_str
 
         return batch
+
+    # Sort by length and shuffle in chunks
+    dataset = ds["train"]
+    dataset = sort_dataset_by_length(
+        dataset, "orig", descending=True, keep_length_column=False
+    )
+    ds["train"] = dataset
 
     # Call generation function
     ds = ds.map(
