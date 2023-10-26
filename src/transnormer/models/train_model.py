@@ -14,7 +14,7 @@ import torch
 
 # from torch.utils.data import DataLoader
 import transformers
-from transnormer.data import loader
+from transnormer.data import loader, process
 from transnormer.preprocess import translit
 
 
@@ -115,6 +115,24 @@ def tokenize_dataset_dict(
     )
 
     return prepared_dataset_dict
+
+
+def filter_dataset_dict_for_length(
+    dataset_dict: datasets.DatasetDict,
+    configs: Dict,
+) -> datasets.DatasetDict:
+    """Add a length column based on "input_ids" and filter out examples that have
+    lengths out of a given range"""
+    min_length = configs["tokenizer"].get("min_length_input", 0)
+    max_length = configs["tokenizer"].get("max_length_input", -1)
+
+    for split, dataset in dataset_dict.items():
+        lengths = [len(s) for s in dataset["input_ids"]]
+        dataset = dataset.add_column("length", lengths)
+        dataset = process.filter_dataset_by_length(dataset, max_length, min_length)
+        dataset_dict[split] = dataset
+
+    return dataset_dict
 
 
 def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
@@ -286,6 +304,11 @@ if __name__ == "__main__":
     tokenizer_input, tokenizer_output = load_tokenizers(CONFIGS)
     prepared_dataset_dict = tokenize_dataset_dict(
         dataset_dict, tokenizer_input, tokenizer_output, CONFIGS
+    )
+
+    # (3.1) Optional: Filter data for length
+    prepared_dataset_dict = filter_dataset_dict_for_length(
+        prepared_dataset_dict, CONFIGS
     )
 
     # (4) Load models

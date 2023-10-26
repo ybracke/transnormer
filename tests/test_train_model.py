@@ -214,6 +214,63 @@ def test_tokenize_dataset_dict_single_tokenizer() -> None:
     assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
 
 
+def test_filter_dataset_dict_for_length() -> None:
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000,
+            ],
+            "n_examples_validation": [
+                1_000_000,
+            ],
+            "n_examples_test": [
+                1,
+            ],
+        },
+        "tokenizer": {
+            "min_length_input": 40,
+            # "max_length_input": 120,
+        },
+        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
+        "training_hyperparams": {
+            "batch_size": 10,
+        },
+    }
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
+    filtered_dataset_dict = train_model.filter_dataset_dict_for_length(
+        dataset_dict, CONFIGS
+    )
+    print(filtered_dataset_dict["train"]["length"])
+    assert len(filtered_dataset_dict["train"]) == 2
+
+    # set an additional max_length_input
+    CONFIGS["tokenizer"]["max_length_input"] = 120
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
+    filtered_dataset_dict = train_model.filter_dataset_dict_for_length(
+        dataset_dict, CONFIGS
+    )
+    assert len(filtered_dataset_dict["train"]) == 1
+
+
 def test_config_file_structure():
     target_param_dict = {
         "gpu": "cuda:0",

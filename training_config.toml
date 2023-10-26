@@ -48,7 +48,8 @@ n_examples_test = [
 
 [tokenizer]
 padding = "longest"
-# max_length_input = 512
+min_length_input = 0
+max_length_input = 512
 # max_length_output = 512
 # input_transliterator = "Transliterator1"
 
