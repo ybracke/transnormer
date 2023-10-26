@@ -4,12 +4,14 @@ import os
 import pytest
 import tomli
 
+from typing import Any, Dict, Union
+
+import datasets
 import transformers
 import torch
 
 from transnormer.models import train_model
 from transnormer.data import loader
-
 
 # logging.basicConfig(
 #     filename='tests/testlogs/test.log',
@@ -18,10 +20,26 @@ from transnormer.data import loader
 #     datefmt='%Y-%m-%d %H:%M:%S'
 # )
 
+# disable caching in datasets
+datasets.disable_caching()
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 LOGGER = logging.getLogger(__name__)
 
 
-def test_tokenize_input_and_output():
+def test_load_tokenizers() -> None:
+    config = {
+        "tokenizer": {},
+        "language_models": {
+            "checkpoint_encoder": "dbmdz/bert-base-historic-multilingual-cased",
+            "checkpoint_decoder": "bert-base-multilingual-cased",
+        },
+    }
+    tok_in, tok_out = train_model.load_tokenizers(config)
+    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
+    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
+
+
+def test_tokenize_input_and_output_two_tokenizers() -> None:
     # Load data
     path = "./tests/testdata/dtaeval/txt/arnima_invalide_1818-head10.txt"
     dataset = loader.load_dtaeval_as_dataset(path)
@@ -38,8 +56,6 @@ def test_tokenize_input_and_output():
     fn_kwargs = {
         "tokenizer_input": tokenizer_input,
         "tokenizer_output": tokenizer_labels,
-        "max_length_input": 128,
-        "max_length_output": 128,
     }
 
     # Do tokenization via mapping
@@ -51,12 +67,12 @@ def test_tokenize_input_and_output():
         remove_columns=["orig", "norm"],
     )
 
-    assert len(prepared_dataset[0]["input_ids"]) == 128
-    assert len(prepared_dataset[0]["attention_mask"]) == 128
-    assert len(prepared_dataset[0]["labels"]) == 128
+    assert len(prepared_dataset[0]["input_ids"]) == 12
+    assert len(prepared_dataset[0]["attention_mask"]) == 12
+    assert len(prepared_dataset[0]["labels"]) == 12
 
 
-def test_tokenize_input_and_output_single_tokenizer():
+def test_tokenize_input_and_output_single_tokenizer() -> None:
     # Load data
     path = "./tests/testdata/dtaeval/txt/arnima_invalide_1818-head10.txt"
     dataset = loader.load_dtaeval_as_dataset(path)
@@ -69,8 +85,6 @@ def test_tokenize_input_and_output_single_tokenizer():
     fn_kwargs = {
         "tokenizer_input": tokenizer_input,
         "tokenizer_output": tokenizer_labels,
-        "max_length_input": 512,
-        "max_length_output": 512,
     }
 
     # Do tokenization via mapping
@@ -82,9 +96,122 @@ def test_tokenize_input_and_output_single_tokenizer():
         remove_columns=["orig", "norm"],
     )
 
-    assert len(prepared_dataset[0]["input_ids"]) == 512
-    assert len(prepared_dataset[0]["attention_mask"]) == 512
-    assert len(prepared_dataset[0]["labels"]) == 512
+    assert len(prepared_dataset[0]["input_ids"]) == 58
+    assert len(prepared_dataset[0]["attention_mask"]) == 58
+    assert len(prepared_dataset[0]["labels"]) == 56
+
+
+def test_tokenize_dataset_dict_two_tokenizers() -> None:
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_validation": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_test": [
+                1_000_000,
+                1_000_000,
+            ],
+        },
+        "subset_sizes": {"train": 3, "validation": 2, "test": 1},
+        "tokenizer": {
+            "input_transliterator": "Transliterator1",
+        },
+        "language_models": {
+            "checkpoint_encoder": "prajjwal1/bert-tiny",
+            "checkpoint_decoder": "prajjwal1/bert-tiny",
+        },
+        "training_hyperparams": {
+            "batch_size": 10,
+        },
+    }
+
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    prepared_dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
+    # Check if input_ids have desired type (torch.Tensor)
+    assert isinstance(prepared_dataset_dict["train"]["input_ids"][0], torch.Tensor)
+    assert all(
+        isinstance(prepared_dataset_dict["train"]["input_ids"][i], torch.Tensor)
+        for i in range(prepared_dataset_dict["train"].num_rows)
+    )
+    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
+    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
+
+
+def test_tokenize_dataset_dict_single_tokenizer() -> None:
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_validation": [
+                1_000_000,
+                1_000_000,
+            ],
+            "n_examples_test": [
+                1_000_000,
+                1_000_000,
+            ],
+        },
+        "subset_sizes": {"train": 3, "validation": 2, "test": 1},
+        # "tokenizer": {
+        #     "max_length_input": 512,
+        #     "max_length_output": 512,
+        # },
+        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
+        "training_hyperparams": {
+            "batch_size": 10,
+        },
+    }
+
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    prepared_dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
+    # Check if input_ids have desired type (torch.Tensor)
+    assert all(
+        isinstance(prepared_dataset_dict["train"]["input_ids"][i], torch.Tensor)
+        for i in range(prepared_dataset_dict["train"].num_rows)
+    )
+    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
+    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
 
 
 def test_config_file_structure():
@@ -117,10 +244,8 @@ def test_config_file_structure():
                 5_000,
             ],
         },
-        # "subset_sizes": {"train": 100, "validation": 10, "test": 1},
         "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
+            "padding": "longest",
             "input_transliterator": "Transliterator1",
         },
         "language_models": {
@@ -131,6 +256,7 @@ def test_config_file_structure():
             "batch_size": 10,
             "epochs": 10,
             "logging_steps": 1_000,
+            "learning_rate": 0.001,
             "eval_steps": 1000,
             "eval_strategy": "steps",
             "save_steps": 10,
@@ -360,149 +486,7 @@ def test_load_and_merge_datasets_subsets2():
     assert dataset["test"].num_rows == 1
 
 
-def test_tokenize_datasets():
-    CONFIGS = {
-        "gpu": "cuda:0",
-        "random_seed": 42,
-        "data": {
-            "paths_train": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_validation": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "n_examples_train": [
-                1_000_000,
-                1_000_000,
-            ],
-            "n_examples_validation": [
-                1_000_000,
-                1_000_000,
-            ],
-            "n_examples_test": [
-                1_000_000,
-                1_000_000,
-            ],
-        },
-        "subset_sizes": {"train": 3, "validation": 2, "test": 1},
-        # The following configs don't matter ...
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-            "input_transliterator": "Transliterator1",
-        },
-        "language_models": {
-            "checkpoint_encoder": "prajjwal1/bert-tiny",
-            "checkpoint_decoder": "prajjwal1/bert-tiny",
-        },
-        "training_hyperparams": {
-            "batch_size": 10,
-            "epochs": 10,
-            "eval_steps": 1000,
-            "eval_strategy": "steps",
-            "save_steps": 10,
-            "fp16": True,
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
-    }
-
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
-    # Check if input_ids have desired type (torch.Tensor) and length (tokenizer.max_length_input)
-    target_length = CONFIGS["tokenizer"]["max_length_input"]
-    assert all(
-        isinstance(prepared_dataset["train"]["input_ids"][i], torch.Tensor)
-        for i in range(prepared_dataset["train"].num_rows)
-    )
-    assert all(
-        len(prepared_dataset["train"]["input_ids"][i]) == target_length
-        for i in range(prepared_dataset["train"].num_rows)
-    )
-    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
-    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
-
-
-def test_tokenize_datasets_single_tokenizer():
-    CONFIGS = {
-        "gpu": "cuda:0",
-        "random_seed": 42,
-        "data": {
-            "paths_train": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_validation": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "n_examples_train": [
-                1_000_000,
-                1_000_000,
-            ],
-            "n_examples_validation": [
-                1_000_000,
-                1_000_000,
-            ],
-            "n_examples_test": [
-                1_000_000,
-                1_000_000,
-            ],
-        },
-        "subset_sizes": {"train": 3, "validation": 2, "test": 1},
-        "tokenizer": {
-            "max_length_input": 512,
-            "max_length_output": 512,
-        },
-        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
-        # The following configs don't matter ...
-        "training_hyperparams": {
-            "batch_size": 10,
-            "epochs": 10,
-            "eval_steps": 1000,
-            "eval_strategy": "steps",
-            "save_steps": 10,
-            "fp16": True,
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
-    }
-
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
-    # Check if input_ids have desired type (torch.Tensor) and length (tokenizer.max_length_input)
-    target_length = CONFIGS["tokenizer"]["max_length_input"]
-    assert all(
-        isinstance(prepared_dataset["train"]["input_ids"][i], torch.Tensor)
-        for i in range(prepared_dataset["train"].num_rows)
-    )
-    assert all(
-        len(prepared_dataset["train"]["input_ids"][i]) == target_length
-        for i in range(prepared_dataset["train"].num_rows)
-    )
-    assert isinstance(tok_in, transformers.PreTrainedTokenizerBase)
-    assert isinstance(tok_out, transformers.PreTrainedTokenizerBase)
-
-
-def test_warmstart_seq2seq_model_normal():
+def test_warmstart_seq2seq_model_separate_encoder_and_decoder():
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -535,8 +519,6 @@ def test_warmstart_seq2seq_model_normal():
         # "subset_sizes": {"train": 3, "validation": 2, "test": 1},
         # The following configs don't matter ...
         "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
             "input_transliterator": "Transliterator1",
         },
         "language_models": {
@@ -559,17 +541,15 @@ def test_warmstart_seq2seq_model_normal():
         },
     }
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
+    _, tok_out = train_model.load_tokenizers(CONFIGS)
     model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
     # Check class
     assert isinstance(model, transformers.EncoderDecoderModel)
     # Check some configs
     assert model.config.num_beams == 4
-    assert model.config.max_length == 128
 
 
-def test_warmstart_seq2seq_model_single_model():
+def test_warmstart_seq2seq_model_single_encoder_decoder():
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -599,11 +579,7 @@ def test_warmstart_seq2seq_model_single_model():
                 1,
             ],
         },
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-            "input_transliterator": "Transliterator1",
-        },
+        "tokenizer": {"padding": "longest"},
         "language_models": {
             "checkpoint_encoder_decoder": "google/byt5-small",
         },
@@ -623,19 +599,210 @@ def test_warmstart_seq2seq_model_single_model():
         },
     }
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
+    _, tok_out = train_model.load_tokenizers(CONFIGS)
     model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
     # Check class
     assert isinstance(model, transformers.T5ForConditionalGeneration)
     # Check some configs
     assert model.config.num_beams == 4
-    assert model.config.max_length == 128
+
+
+def test_data_collation() -> None:
+    BATCH_SIZE = 8
+    CONFIGS = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dtaeval-train-16.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dtaeval-train-16.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                16,
+            ],
+            "n_examples_validation": [
+                16,
+            ],
+            "n_examples_test": [
+                1,
+            ],
+        },
+        "tokenizer": {
+            "padding": "longest",
+        },
+        "language_models": {
+            "checkpoint_encoder_decoder": "google/byt5-small",
+        },
+        "training_hyperparams": {
+            "batch_size": BATCH_SIZE,
+            "epochs": 1,
+            "logging_steps": 1,
+            "eval_steps": 1,
+            "eval_strategy": "steps",
+            "save_steps": 1,
+            "fp16": False,  # set to False for byT5-based models
+        },
+        "beam_search_decoding": {
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+            "length_penalty": 2.0,
+            "num_beams": 4,
+        },
+    }
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tokenizer, _ = train_model.load_tokenizers(CONFIGS)
+    prepared_dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tokenizer, tokenizer, CONFIGS
+    )
+    model = train_model.warmstart_seq2seq_model(CONFIGS, tokenizer, device)
+
+    output_dir = "tests/testdata/tmp"
+
+    train_dataset = prepared_dataset_dict["train"]
+    eval_dataset = prepared_dataset_dict["validation"]
+
+    # Set-up training arguments from hyperparameters
+    training_args = transformers.Seq2SeqTrainingArguments(
+        output_dir=output_dir,
+        predict_with_generate=True,
+        evaluation_strategy=CONFIGS["training_hyperparams"]["eval_strategy"],
+        fp16=CONFIGS["training_hyperparams"]["fp16"],
+        eval_steps=CONFIGS["training_hyperparams"]["eval_steps"],
+        num_train_epochs=CONFIGS["training_hyperparams"]["epochs"],
+        per_device_train_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
+        per_device_eval_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
+        save_steps=CONFIGS["training_hyperparams"]["save_steps"],
+        logging_steps=CONFIGS["training_hyperparams"]["logging_steps"],
+        group_by_length=True,
+        # remove_unused_columns=False, # for test reasons - doesn't work
+    )
+
+    collator = transformers.DataCollatorForSeq2Seq(
+        tokenizer,
+        padding=CONFIGS["tokenizer"]["padding"],  # "longest"
+    )
+
+    # Instantiate trainer
+    trainer = transformers.Seq2SeqTrainer(
+        model=model,
+        args=training_args,
+        data_collator=collator,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+    )
+
+    # Get batches
+    for i, batch in enumerate(trainer.get_train_dataloader()):
+        # assert that all input_ids/labels are padded to length of the longest example
+        length_longest_input_in_batch = max(
+            [len([t for t in s if t != 0]) for s in batch["input_ids"]]
+        )
+        assert batch["input_ids"].shape == (BATCH_SIZE, length_longest_input_in_batch)
+        length_longest_output_in_batch = max(
+            [len([t for t in s if t != -100]) for s in batch["labels"]]
+        )
+        assert batch["labels"].shape == (BATCH_SIZE, length_longest_output_in_batch)
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="training requires cuda")
-def test_train_seq2seq_model():
-    CONFIGS = {
+def test_train_seq2seq_model_single_encoder_decoder() -> None:
+    CONFIGS: Dict = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/ascii-reverse.jsonl",
+                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/ascii-reverse.jsonl",
+                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "paths_test": [
+                "tests/testdata/jsonl/ascii-reverse.jsonl",
+                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
+            ],
+            "n_examples_train": [
+                1,
+            ],
+            "n_examples_validation": [
+                1,
+            ],
+            "n_examples_test": [
+                1,
+            ],
+        },
+        "tokenizer": {
+            "padding": "longest",
+        },
+        "language_models": {
+            "checkpoint_encoder_decoder": "google/byt5-small",
+        },
+        "training_hyperparams": {
+            "batch_size": 1,
+            "epochs": 1,
+            # "learning_rate" : 0.001,
+            "logging_steps": 1,
+            "eval_steps": 1,
+            "eval_strategy": "steps",
+            "save_steps": 1,
+            "fp16": False,  # set to False for byT5-based models
+        },
+        "beam_search_decoding": {
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+            "length_penalty": 2.0,
+            "num_beams": 4,
+        },
+    }
+    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    prepared_dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
+    model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
+
+    model_untrained = copy.deepcopy(model)
+    output_dir = "tests/testdata/tmp"
+
+    # Training
+    train_dataset = prepared_dataset_dict["train"]
+    eval_dataset = prepared_dataset_dict["validation"]
+    train_model.train_seq2seq_model(
+        model, train_dataset, eval_dataset, tok_in, CONFIGS, output_dir
+    )
+    # Compare all states and check that some of them changed
+    unequal_states = []
+    for (name_mo, params_mo), (name_mn, params_mn) in zip(
+        model_untrained.state_dict().items(), model.state_dict().items()
+    ):
+        assert name_mo == name_mn
+        if not torch.equal(params_mo, params_mn):
+            unequal_states.append(name_mo)
+    print(len(unequal_states))
+    assert len(unequal_states) > 0
+    # Remove files that were created during training
+    for root, dirs, files in os.walk(output_dir, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        else:
+            os.rmdir(root)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="training requires cuda")
+def test_train_seq2seq_model_separate_encoder_and_decoder() -> None:
+    CONFIGS: Dict = {
         "gpu": "cuda:0",
         "random_seed": 42,
         "data": {
@@ -666,8 +833,9 @@ def test_train_seq2seq_model():
         },
         # The following configs don't matter ...
         "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
+            # "max_length_input": 128,
+            # "max_length_output": 128,
+            "padding": "longest",
             "input_transliterator": "Transliterator1",
         },
         "language_models": {
@@ -691,16 +859,22 @@ def test_train_seq2seq_model():
         },
     }
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
-
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    tok_in, tok_out = train_model.load_tokenizers(CONFIGS)
+    prepared_dataset_dict = train_model.tokenize_dataset_dict(
+        dataset_dict, tok_in, tok_out, CONFIGS
+    )
     model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
 
     model_untrained = copy.deepcopy(model)
     output_dir = "tests/testdata/tmp"
 
     # Training
-    train_model.train_seq2seq_model(model, prepared_dataset, CONFIGS, output_dir)
+    train_dataset = prepared_dataset_dict["train"]
+    eval_dataset = prepared_dataset_dict["validation"]
+    train_model.train_seq2seq_model(
+        model, train_dataset, eval_dataset, tok_in, CONFIGS, output_dir
+    )
     # Compare all states and check that some of them changed
     unequal_states = []
     for (name_mo, params_mo), (name_mn, params_mn) in zip(
@@ -716,125 +890,3 @@ def test_train_seq2seq_model():
             os.remove(os.path.join(root, file))
         else:
             os.rmdir(root)
-
-
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="training requires cuda")
-def test_train_seq2seq_model_single_model():
-    CONFIGS = {
-        "gpu": "cuda:0",
-        "random_seed": 42,
-        "data": {
-            "paths_train": [
-                "tests/testdata/jsonl/ascii-reverse.jsonl",
-                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_validation": [
-                "tests/testdata/jsonl/ascii-reverse.jsonl",
-                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "paths_test": [
-                "tests/testdata/jsonl/ascii-reverse.jsonl",
-                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
-            "n_examples_train": [
-                1,
-            ],
-            "n_examples_validation": [
-                1,
-            ],
-            "n_examples_test": [
-                1,
-            ],
-        },
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-        },
-        "language_models": {
-            "checkpoint_encoder_decoder": "google/byt5-small",
-        },
-        "training_hyperparams": {
-            "batch_size": 1,
-            "epochs": 100,
-            "eval_steps": 100,
-            "eval_strategy": "steps",
-            "save_steps": 100,
-            "fp16": False,  # set to False for byT5-based models
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
-    }
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
-    dataset = train_model.load_and_merge_datasets(CONFIGS)
-    prepared_dataset, tok_in, tok_out = train_model.tokenize_datasets(dataset, CONFIGS)
-
-    # print(dataset["train"][0])
-    # print(tok_out.decode(prepared_dataset["train"][0]["labels"][0:46]))
-
-    model = train_model.warmstart_seq2seq_model(CONFIGS, tok_out, device)
-    output_dir = "tests/testdata/tmp"
-
-    state_dict_model_previously = copy.deepcopy(model.state_dict())
-
-    # Training
-    # train here directly instead of via .train_seq2seq_model
-    # train_model.train_seq2seq_model(model, prepared_dataset, CONFIGS, output_dir)
-
-    configs = CONFIGS
-
-    # Set-up training arguments from hyperparameters
-    training_args = transformers.Seq2SeqTrainingArguments(
-        output_dir=output_dir,
-        predict_with_generate=True,
-        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
-        fp16=configs["training_hyperparams"]["fp16"],
-        eval_steps=configs["training_hyperparams"]["eval_steps"],
-        num_train_epochs=configs["training_hyperparams"]["epochs"],
-        per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
-        per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
-        save_steps=configs["training_hyperparams"]["save_steps"],
-        # gradient_accumulation_steps=2, # crusher-specific
-        # optim="adafactor", # crusher-specific
-        # learning_rate=2e-5, # from https://github.com/huggingface/notebooks/blob/main/examples/summarization.ipynb
-        # weight_decay=0.01, # from https://github.com/huggingface/notebooks/blob/main/examples/summarization.ipynb
-    )
-
-    # Instantiate trainer
-    trainer = transformers.Seq2SeqTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=prepared_dataset["train"],
-        eval_dataset=prepared_dataset["validation"],
-    )
-
-    trainer.train()
-
-    # Have any parameters changed during training?
-    unequal_states = []
-    for (name_mo, params_mo), (name_mn, params_mn) in zip(
-        state_dict_model_previously.items(), model.state_dict().items()
-    ):
-        assert name_mo == name_mn
-        if not torch.equal(params_mo, params_mn):
-            unequal_states.append(name_mo)
-    assert len(unequal_states) > 0
-
-    # # Look at input and generation
-    # for batch in trainer.get_train_dataloader():
-    #     break
-    # batch_without_labels = {k: v.to(device) for k, v in batch.items() if k != "labels"}
-    # print("Input:", batch_without_labels["input_ids"])
-    # print(f"Model generated: {model.generate(**batch_without_labels, num_beams=2, early_stopping=True, max_length=128)}")
-
-    # Remove files that were created during training
-    for root, dirs, files in os.walk(output_dir, topdown=False):
-        for file in files:
-            os.remove(os.path.join(root, file))
-        else:
-            os.rmdir(root)
-
-    return None
