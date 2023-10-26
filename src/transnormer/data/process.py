@@ -19,26 +19,6 @@ def sort_dataset_by_length(
     return dataset
 
 
-def shuffle_dataset_in_chunks(
-    dataset: datasets.Dataset, chunk_size: int
-) -> datasets.Dataset:
-    """
-    Shuffle a datasets.Dataset in chunks of size `chunk_size`
-
-    Example: This chops the dataset in chunks of size 32 and randomly orders the chunks.
-    Note: The internal order of the chunks is not altered.
-    """
-
-    num_chunks = len(dataset) // chunk_size
-    if len(dataset) % chunk_size:
-        num_chunks += 1
-    chunks = [dataset.shard(num_chunks, i, contiguous=True) for i in range(num_chunks)]
-    random.shuffle(chunks)
-    shuffled_ds = datasets.concatenate_datasets(chunks)
-
-    return shuffled_ds
-
-
 def filter_dataset_by_length(
     dataset: datasets.Dataset,
     max_length: int = -1,

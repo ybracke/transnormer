@@ -3,6 +3,7 @@ import torch
 
 from transnormer.data import process
 
+# Fix seeds for reproducibilty
 SEED = 42
 torch.manual_seed(SEED)
 
@@ -40,10 +41,6 @@ def test_sort_dataset_by_length_desc() -> None:
     sorted_lengths = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     for i in range(10):
         assert sorted_ds[i]["length"] == sorted_lengths[i]
-
-
-def test_shuffle_dataset_in_chunks() -> None:
-    pass
 
 
 def test_filter_dataset_by_length_max_length_70() -> None:
