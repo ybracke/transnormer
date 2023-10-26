@@ -37,3 +37,33 @@ def shuffle_dataset_in_chunks(
     shuffled_ds = datasets.concatenate_datasets(chunks)
 
     return shuffled_ds
+
+
+def filter_dataset_by_length(
+    dataset: datasets.Dataset,
+    max_length: int = -1,
+    min_length: int = 0,
+    name_length_column: str = "length",
+) -> datasets.Dataset:
+    """Filter a datasets.Dataset with a length column for min/max lengths"""
+
+    # upper and lower bound
+    if min_length and (max_length > -1):
+        condition = (
+            lambda record: record[name_length_column] >= min_length
+            and record[name_length_column] <= max_length
+        )  # noqa: E731
+    # only upper bound
+    elif max_length > -1:
+        condition = (
+            lambda record: record[name_length_column] <= max_length
+        )  # noqa: E731
+    # only lower bound
+    elif min_length:
+        condition = (
+            lambda record: record[name_length_column] >= min_length
+        )  # noqa: E731
+    # no bounds, just return dataset as is
+    else:
+        return dataset
+    return dataset.filter(condition)
