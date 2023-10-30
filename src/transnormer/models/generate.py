@@ -1,16 +1,15 @@
 import argparse
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional
 
 import tomli
 import random
 import numpy as np
 import torch
 import datasets
-import pandas as pd
 import transformers
 
 from transnormer.preprocess import translit
-from transnormer.data.process import sort_dataset_by_length, shuffle_dataset_in_chunks
+from transnormer.data.process import sort_dataset_by_length
 
 
 def parse_and_check_arguments(
@@ -125,7 +124,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
         return batch
 
-    # Sort by length and shuffle in chunks
+    # Sort by length
     dataset = ds["train"]
     dataset = sort_dataset_by_length(
         dataset, "orig", descending=True, keep_length_column=False
