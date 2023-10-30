@@ -6,7 +6,7 @@ import shutil
 # import time
 import tomli
 
-from typing import Dict, Any, Tuple
+from typing import Any, Dict, Tuple
 
 import datasets
 import numpy as np
@@ -14,13 +14,15 @@ import torch
 
 # from torch.utils.data import DataLoader
 import transformers
-from transnormer.data import loader
+from transnormer.data import loader, process
 from transnormer.preprocess import translit
 
 
 def tokenize_input_and_output(
-    batch, tokenizer_input, tokenizer_output, max_length_input, max_length_output
-):
+    batch: Dict,
+    tokenizer_input: transformers.PreTrainedTokenizerBase,
+    tokenizer_output: transformers.PreTrainedTokenizerBase,
+) -> Dict:
     """
     Tokenizes a `batch` of input and label strings. Assumes that input string
     (label string) is stored in batch under the key `"orig"` (`"norm"`).
@@ -30,18 +32,8 @@ def tokenize_input_and_output(
     """
 
     # Tokenize the inputs and labels
-    inputs = tokenizer_input(
-        batch["orig"],
-        padding="max_length",
-        truncation=True,
-        max_length=max_length_input,
-    )
-    outputs = tokenizer_output(
-        batch["norm"],
-        padding="max_length",
-        truncation=True,
-        max_length=max_length_output,
-    )
+    inputs = tokenizer_input(batch["orig"])
+    outputs = tokenizer_output(batch["norm"])
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
@@ -56,18 +48,10 @@ def tokenize_input_and_output(
     return batch
 
 
-def tokenize_datasets(
-    dataset: datasets.DatasetDict, configs: Dict[str, Any]
-) -> Tuple[
-    datasets.DatasetDict,
-    transformers.PreTrainedTokenizerBase,
-    transformers.PreTrainedTokenizerBase,
-]:
-    """
-    Tokenize the datasets in a DatasetDict as specified in the config file.
-
-    Also returns the loaded input and output tokenizers.
-    """
+def load_tokenizers(
+    configs: Dict[str, Any]
+) -> Tuple[transformers.PreTrainedTokenizerBase, transformers.PreTrainedTokenizerBase]:
+    """Load two tokenizer objects based on config dictionary and possibly replace the input tokenizer's normalization component with a custom transliterator"""
 
     # (1) Load tokenizers
     if "checkpoint_encoder_decoder" in configs["language_models"]:
@@ -94,32 +78,61 @@ def tokenize_datasets(
         tokenizer_output = transformers.AutoTokenizer.from_pretrained(
             configs["language_models"]["checkpoint_decoder"]
         )
+    return tokenizer_input, tokenizer_output
 
-    # (3) Define tokenization keyword arguments
+
+def tokenize_dataset_dict(
+    dataset_dict: datasets.DatasetDict,
+    tokenizer_input: transformers.PreTrainedTokenizerBase,
+    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    configs,
+) -> datasets.DatasetDict:
+    """
+    Tokenize the datasets in a DatasetDict as specified in the config file.
+
+    Also returns the loaded input and output tokenizers.
+    """
+
     tokenization_kwargs = {
         "tokenizer_input": tokenizer_input,
         "tokenizer_output": tokenizer_output,
-        "max_length_input": configs["tokenizer"]["max_length_input"],
-        "max_length_output": configs["tokenizer"]["max_length_output"],
     }
 
     # Tokenize by applying map function to the DatasetDict
-    prepared_dataset = dataset.map(
+    prepared_dataset_dict = dataset_dict.map(
         tokenize_input_and_output,
         fn_kwargs=tokenization_kwargs,
-        remove_columns=["orig", "norm"],
+        # remove_columns=["orig", "norm"],
         batched=True,
         batch_size=configs["training_hyperparams"]["batch_size"],
         load_from_cache_file=False,
     )
 
     # Convert to torch tensors
-    prepared_dataset.set_format(
+    prepared_dataset_dict.set_format(
         type="torch",
         columns=["input_ids", "attention_mask", "labels"],
     )
 
-    return prepared_dataset, tokenizer_input, tokenizer_output
+    return prepared_dataset_dict
+
+
+def filter_dataset_dict_for_length(
+    dataset_dict: datasets.DatasetDict,
+    configs: Dict,
+) -> datasets.DatasetDict:
+    """Add a length column based on "input_ids" and filter out examples that have
+    lengths out of a given range"""
+    min_length = configs["tokenizer"].get("min_length_input", 0)
+    max_length = configs["tokenizer"].get("max_length_input", -1)
+
+    for split, dataset in dataset_dict.items():
+        lengths = [len(s) for s in dataset["input_ids"]]
+        dataset = dataset.add_column("length", lengths)
+        dataset = process.filter_dataset_by_length(dataset, max_length, min_length)
+        dataset_dict[split] = dataset
+
+    return dataset_dict
 
 
 def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
@@ -150,7 +163,7 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
 
     dataset = ds_split_merged
 
-    # FIXME: isn't this depcrecated?
+    # TODO: is this depcrecated?
     # Optional: create smaller datasets from random examples
     if "subset_sizes" in configs:
         train_size = configs["subset_sizes"]["train"]
@@ -169,7 +182,7 @@ def warmstart_seq2seq_model(
     configs: Dict[str, Any],
     tokenizer_output: transformers.PreTrainedTokenizerBase,
     device: torch.device,
-) -> transformers.EncoderDecoderModel:
+) -> transformers.PreTrainedModel:
     """
     Load and configure an encoder-decoder model.
     """
@@ -197,7 +210,7 @@ def warmstart_seq2seq_model(
         model.config.pad_token_id = tokenizer_output.pad_token_id
 
     # Params for beam search decoding
-    model.config.max_length = configs["tokenizer"]["max_length_output"]
+    # model.config.max_length = configs["tokenizer"].get("max_length_output")
     model.config.no_repeat_ngram_size = configs["beam_search_decoding"][
         "no_repeat_ngram_size"
     ]
@@ -209,8 +222,10 @@ def warmstart_seq2seq_model(
 
 
 def train_seq2seq_model(
-    model: transformers.EncoderDecoderModel,
-    prepared_dataset: datasets.DatasetDict,
+    model: transformers.PreTrainedModel,
+    train_dataset: datasets.Dataset,
+    eval_dataset: datasets.Dataset,
+    tokenizer: transformers.PreTrainedTokenizerBase,
     configs: Dict[str, Any],
     output_dir: str,
 ) -> None:
@@ -232,14 +247,20 @@ def train_seq2seq_model(
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
         save_steps=configs["training_hyperparams"]["save_steps"],
         logging_steps=configs["training_hyperparams"]["logging_steps"],
+        group_by_length=True,
+    )
+
+    collator = transformers.DataCollatorForSeq2Seq(
+        tokenizer, padding=configs["tokenizer"]["padding"]
     )
 
     # Instantiate trainer
     trainer = transformers.Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=prepared_dataset["train"],
-        eval_dataset=prepared_dataset["validation"],
+        data_collator=collator,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
     )
 
     # Run training
@@ -276,13 +297,18 @@ if __name__ == "__main__":
     # (2) Load data
 
     print("Loading the data ...")
-    dataset = load_and_merge_datasets(CONFIGS)
+    dataset_dict = load_and_merge_datasets(CONFIGS)
 
     # (3) Tokenize data
-
     print("Tokenizing and preparing the data ...")
-    prepared_dataset, tokenizer_input, tokenizer_output = tokenize_datasets(
-        dataset, CONFIGS
+    tokenizer_input, tokenizer_output = load_tokenizers(CONFIGS)
+    prepared_dataset_dict = tokenize_dataset_dict(
+        dataset_dict, tokenizer_input, tokenizer_output, CONFIGS
+    )
+
+    # (3.1) Optional: Filter data for length
+    prepared_dataset_dict = filter_dataset_dict_for_length(
+        prepared_dataset_dict, CONFIGS
     )
 
     # (4) Load models
@@ -293,7 +319,14 @@ if __name__ == "__main__":
     # (5) Training
 
     print("Training model ...")
-    train_seq2seq_model(model, prepared_dataset, CONFIGS, MODELDIR)
+    train_seq2seq_model(
+        model,
+        prepared_dataset_dict["train"],
+        prepared_dataset_dict["validation"],
+        tokenizer_input,
+        CONFIGS,
+        MODELDIR,
+    )
 
     # (6) Saving the final model
 

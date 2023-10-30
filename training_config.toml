@@ -6,35 +6,40 @@ gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 # Random seed (fix for reproducibility)
 random_seed = 42
 
+
 # Data
 [data]
 paths_train = [
-    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
+    "data/interim/dtaeval-v4.2/dtaeval-v4.2-train.jsonl",
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
     ]
 
 paths_validation = [
-    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
+    "data/interim/dtaeval-v4.2/dtaeval-v4.2-validation.jsonl",
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
     ]
 
 paths_test = [
-    "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
+    "data/interim/dtaeval-v4.2/dtaeval-v4.2-test.jsonl" ,
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
     ]
 n_examples_train = [
-    10_000,
-    # 1_000_000_000,
+    1_000,
+    # 10_000,
     # 1_000_000_000,
     ]
 n_examples_validation = [
-    1000,
+    1_000,
     # 1_000_000_000,
     # 1_000_000_000,
     ]
+# not used
 n_examples_test = [
     1,
     # 1_000_000_000,
@@ -42,11 +47,10 @@ n_examples_test = [
     ]
 
 [tokenizer]
-# path = "resources/tokenizer-wp-dta1600-1899"
-# padding = true
-# truncation = true
-max_length_input = 256
-max_length_output = 256
+padding = "longest"
+min_length_input = 0
+max_length_input = 512
+# max_length_output = 512
 # input_transliterator = "Transliterator1"
 
 # Model that is retrained
@@ -56,22 +60,23 @@ max_length_output = 256
 checkpoint_encoder_decoder = "google/byt5-small"
 
 [training_hyperparams]
-batch_size = 32
-epochs = 100
-# learning_rate = 0.0005
-logging_steps = 1_000
-eval_steps = 1_000
+batch_size = 8
+epochs = 10
+learning_rate = 0.001
+logging_steps = 2_000
+eval_steps = 4_000
 eval_strategy = "steps"
-save_steps = 15_000
+save_steps = 12_000
 fp16 = false
+# ~6k steps per epoch -> 60k steps in total
 
 
 # Params for beam search decoding
-# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/transformers/v4.10.1/main_classes/model.html
+# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/16transformers/v4.10.1/main_classes/model.html
 # These initial parameters were copied from
 # https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
 [beam_search_decoding]
-no_repeat_ngram_size = 3
+no_repeat_ngram_size = 0
 early_stopping = true
 length_penalty = 2.0
 num_beams = 4
