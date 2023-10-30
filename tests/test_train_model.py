@@ -358,7 +358,7 @@ def test_config_file_structure() -> None:
     assert all_keys_match(CONFIGS, target_param_dict)
 
 
-def test_load_and_merge_datasets_full_sets():
+def test_load_and_merge_datasets_full_sets() -> None:
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -388,30 +388,7 @@ def test_load_and_merge_datasets_full_sets():
                 1_000_000,
             ],
         },
-        # The following configs don't matter ...
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-            "input_transliterator": "Transliterator1",
-        },
-        "language_models": {
-            "checkpoint_encoder": "prajjwal1/bert-tiny",
-            "checkpoint_decoder": "prajjwal1/bert-tiny",
-        },
-        "training_hyperparams": {
-            "batch_size": 10,
-            "epochs": 10,
-            "eval_steps": 1000,
-            "eval_strategy": "steps",
-            "save_steps": 10,
-            "fp16": True,
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
+        # The rest of the configs doesn't matter ...
     }
 
     dataset = train_model.load_and_merge_datasets(CONFIGS)
@@ -420,7 +397,7 @@ def test_load_and_merge_datasets_full_sets():
     assert dataset["test"].num_rows == 6
 
 
-def test_load_and_merge_datasets_subsets1():
+def test_load_and_merge_datasets_subsets1() -> None:
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -450,30 +427,7 @@ def test_load_and_merge_datasets_subsets1():
                 1,
             ],
         },
-        # The following configs don't matter ...
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-            "input_transliterator": "Transliterator1",
-        },
-        "language_models": {
-            "checkpoint_encoder": "prajjwal1/bert-tiny",
-            "checkpoint_decoder": "prajjwal1/bert-tiny",
-        },
-        "training_hyperparams": {
-            "batch_size": 10,
-            "epochs": 10,
-            "eval_steps": 1000,
-            "eval_strategy": "steps",
-            "save_steps": 10,
-            "fp16": True,
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
+        # The rest of the configs doesn't matter ...
     }
 
     dataset = train_model.load_and_merge_datasets(CONFIGS)
@@ -482,7 +436,7 @@ def test_load_and_merge_datasets_subsets1():
     assert dataset["test"].num_rows == 2
 
 
-def test_load_and_merge_datasets_subsets2():
+def test_load_and_merge_datasets_subsets2() -> None:
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -513,30 +467,7 @@ def test_load_and_merge_datasets_subsets2():
             ],
         },
         "subset_sizes": {"train": 3, "validation": 2, "test": 1},
-        # The following configs don't matter ...
-        "tokenizer": {
-            "max_length_input": 128,
-            "max_length_output": 128,
-            "input_transliterator": "Transliterator1",
-        },
-        "language_models": {
-            "checkpoint_encoder": "prajjwal1/bert-tiny",
-            "checkpoint_decoder": "prajjwal1/bert-tiny",
-        },
-        "training_hyperparams": {
-            "batch_size": 10,
-            "epochs": 10,
-            "eval_steps": 1000,
-            "eval_strategy": "steps",
-            "save_steps": 10,
-            "fp16": True,
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
+        # The rest of the configs doesn't matter ...
     }
 
     dataset = train_model.load_and_merge_datasets(CONFIGS)
@@ -545,7 +476,7 @@ def test_load_and_merge_datasets_subsets2():
     assert dataset["test"].num_rows == 1
 
 
-def test_warmstart_seq2seq_model_separate_encoder_and_decoder():
+def test_warmstart_seq2seq_model_separate_encoder_and_decoder() -> None:
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -575,8 +506,6 @@ def test_warmstart_seq2seq_model_separate_encoder_and_decoder():
                 1,
             ],
         },
-        # "subset_sizes": {"train": 3, "validation": 2, "test": 1},
-        # The following configs don't matter ...
         "tokenizer": {
             "input_transliterator": "Transliterator1",
         },
@@ -608,7 +537,7 @@ def test_warmstart_seq2seq_model_separate_encoder_and_decoder():
     assert model.config.num_beams == 4
 
 
-def test_warmstart_seq2seq_model_single_encoder_decoder():
+def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
     CONFIGS = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -648,7 +577,7 @@ def test_warmstart_seq2seq_model_single_encoder_decoder():
             "eval_steps": 1000,
             "eval_strategy": "steps",
             "save_steps": 10,
-            "fp16": True,
+            "fp16": False,
         },
         "beam_search_decoding": {
             "no_repeat_ngram_size": 3,
@@ -890,7 +819,6 @@ def test_train_seq2seq_model_separate_encoder_and_decoder() -> None:
                 1,
             ],
         },
-        # The following configs don't matter ...
         "tokenizer": {
             # "max_length_input": 128,
             # "max_length_output": 128,
