@@ -271,7 +271,7 @@ def test_filter_dataset_dict_for_length() -> None:
     assert len(filtered_dataset_dict["train"]) == 1
 
 
-def test_config_file_structure():
+def test_config_file_structure() -> None:
     target_param_dict = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -303,6 +303,8 @@ def test_config_file_structure():
         },
         "tokenizer": {
             "padding": "longest",
+            "min_length_input": 0,
+            "max_length_input": 512,
             "input_transliterator": "Transliterator1",
         },
         "language_models": {
