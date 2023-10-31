@@ -5,16 +5,21 @@ import datasets
 def sort_dataset_by_length(
     dataset: datasets.Dataset,
     column: str,
-    name_length_column: str = "length",
     keep_length_column: bool = True,
+    name_length_column: str = "length",
+    add_original_index: bool = True,
+    name_index_column: str = "#",
     descending: bool = False,
 ) -> datasets.Dataset:
     """Sort a datasets.Dataset by string length of text in `column`"""
     lengths = [len(s) for s in dataset[column]]
     dataset = dataset.add_column(name_length_column, lengths)
+    if add_original_index:
+        indexes = [i for i in range(len(dataset))]
+        dataset = dataset.add_column(name_index_column, indexes)
     dataset = dataset.sort(name_length_column, reverse=descending)
     if not keep_length_column:
-        dataset.remove_columns(name_length_column)
+        dataset = dataset.remove_columns(name_length_column)
 
     return dataset
 
