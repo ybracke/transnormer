@@ -325,7 +325,13 @@ optional arguments:
 Example call:
 
 ```
-python3 src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file hidden/predictions/8ae3fd47.jsonl --pred-file hidden/predictions/8ae3fd47.jsonl --ref-field=norm --pred-field=pred -a both -sent-wise-file hidden/sent_scores.pkl --test-config 9a61b7f5.toml >> hidden/eval.jsonl
+python3 src/transnormer/evaluation/evaluate.py \
+  --input-type jsonl --ref-file hidden/predictions/d037b975.jsonl \
+  --pred-file hidden/predictions/d037b975.jsonl \
+  --ref-field=norm --pred-field=pred -a both \
+  --sent-wise-file hidden/sent_scores/sent_scores_d037b975.pkl \
+  --test-config hidden/test_configs/d1b1ea77.toml \
+  >> hidden/eval.jsonl
 ```
 
 In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If the two versions (ref and pred) are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
