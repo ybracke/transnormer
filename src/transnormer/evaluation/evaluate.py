@@ -7,9 +7,9 @@ import re
 import pickle
 from typing import Any, Dict, List, Optional
 
-from metrics import word_acc_final as acc
-from metrics import lev_norm_corpuslevel as lev_norm_c
-import tokenise
+from transnormer.evaluation.metrics import word_acc_final as acc
+from transnormer.evaluation.metrics import lev_norm_corpuslevel as lev_norm_c
+from transnormer.evaluation import tokenise
 
 
 def read_jsonl_file(file_path: str, field_name: str) -> List[str]:
