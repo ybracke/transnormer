@@ -3,11 +3,13 @@
 
 import argparse
 import json
+import re
+import pickle
 from typing import Any, Dict, List, Optional
 
-from transnormer.evaluation.metrics import word_acc_final as acc
-from transnormer.evaluation.metrics import lev_norm_corpuslevel as lev_norm_c
-from transnormer.evaluation.tokenise import basic_tokenise
+from metrics import word_acc_final as acc
+from metrics import lev_norm_corpuslevel as lev_norm_c
+import tokenise
 
 
 def read_jsonl_file(file_path: str, field_name: str) -> List[str]:
@@ -30,14 +32,19 @@ def read_plain_text_file(file_path: str) -> List[str]:
 
 def get_metrics(
     ref: List[str], pred: List[str], align_types: List[str]
-) -> Dict[str, float]:
-    ref_tok = [basic_tokenise(sent) for sent in ref]
-    pred_tok = [basic_tokenise(sent) for sent in pred]
+) -> Dict[str, Any]:
+    """Computes evaluation metrics over two lists of sentences
 
-    metrics: Dict[str, float] = {"n": len(ref)}
+    Internally each sentence is tokenized and aligned with its corresponding sentence in the other list. Then, the scores are computed.
+    """
+    ref_tok = [tokenise.basic_tokenise(sent) for sent in ref]
+    pred_tok = [tokenise.basic_tokenise(sent) for sent in pred]
+
+    metrics: Dict[str, Any] = {"n": len(ref)}
 
     acc_scores = acc(ref_tok, pred_tok, align_types)
     metrics["acc_harmonized"] = acc_scores["both"] if "both" in align_types else None
+    metrics["per_sent"] = acc_scores["per_sent"]
 
     dist_score = lev_norm_c(ref, pred)
     metrics["dist_norm_c"] = dist_score
@@ -80,6 +87,12 @@ def parse_and_check_arguments(
         required=True,
     )
     parser.add_argument(
+        "--sent-wise-file",
+        type=str,
+        help="Path to a file where the sentence-wise accuracy scores get saved. For pickled output (list), the path must match /*.pkl/. Textual output is a comma-separated list",
+    )
+    # parser.add_argument('-c', '--cache', help='pickle file containing cached alignments', default=None)
+    parser.add_argument(
         "--test-config",
         help="Path to the file containing the test configurations",
     )
@@ -114,12 +127,21 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
     metrics = get_metrics(ref, pred, align_types)
 
+    # In case we computed sentence-wise scores: store them in file
+    # Currently only accepts harmonized accuracy ("both")
+    sent_wise_scores = metrics.pop("per_sent").get("both")
+    pickle_output = re.match(r".*.pkl", args.sent_wise_file)
+    if pickle_output:
+        with open(args.sent_wise_file, "wb") as f:
+            pickle.dump(sent_wise_scores, f)
+    else:
+        with open(args.sent_wise_file, "w", encoding="utf-8") as f:
+            f.write(",".join([str(score) for score in sent_wise_scores]))
+
     output = {"pred-file": args.pred_file, "ref-file": args.ref_file}
     if args.test_config:
         output["test-config"] = args.test_config
-
     output.update(metrics)
-
     print(json.dumps(output))
 
     return
