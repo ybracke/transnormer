@@ -5,8 +5,8 @@ import re
 
 from typing import List, Optional, Tuple
 
-from transnormer.evaluation.tokenise import basic_tokenise
-from transnormer.evaluation.wedit_distance_align import wedit_distance_align
+from tokenise import basic_tokenise
+from wedit_distance_align import wedit_distance_align
 
 
 def read_file(filename: str) -> List[str]:
@@ -31,6 +31,25 @@ def homogenise(sent: str) -> str:
 def align(
     sents_ref: List[str], sents_pred: List[str], cache_file: Optional[str] = None
 ) -> List[List[Tuple[str, str, float]]]:
+    """
+    Align sentences in `sents_ref` and `sents_pred` on token-level.
+
+    Sentences at the same index get aligned. Each token in a sentence from `sents_ref` gets aligned to 0 or more tokens in the corresponding sentence from `sents_pred`
+
+    Tokens are understood as a stretch of characters without a space in-between. Thus you might want to apply some pre-processing to your text (e.g. with `basic_tokenise`).
+
+    Example:
+
+    ```python
+    >>>align(['Sie bekommen ferner'], ['bekommen ferner an'])
+    >>>[
+        [
+            ("Sie", "░", 4),
+            ("bekommen", "bekommen", 0),
+            ("ferner", "ferner▁an", 3.5999999999999996),
+        ],
+    ]
+    """
     alignments, cache = [], {}
     if cache_file is not None and os.path.exists(cache_file):
         cache = pickle.load(open(cache_file, "rb"))

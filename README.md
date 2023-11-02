@@ -294,11 +294,11 @@ The script `src/transnormer/evaluation/evaluate.py` computes an accuracy score a
 
 ```
 usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
-                   [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES [--test-config TEST_CONFIG]
+                   [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES [--sent-wise-file SENT_WISE_FILE]
+                   [--test-config TEST_CONFIG]
 
-
-Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-
-type=both for a harmonized accuracy score.
+Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-type=both
+for a harmonized accuracy score.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -312,8 +312,11 @@ optional arguments:
   --pred-field PRED_FIELD
                         Name of the field containing prediction (for jsonl input)
   -a ALIGN_TYPES, --align-types ALIGN_TYPES
-                        Which file's tokenisation to use as reference for alignment. Valid choices are 'both',
-                        'ref', 'pred'. Multiple choices are possible (comma separated)
+                        Which file's tokenisation to use as reference for alignment. Valid choices are 'both', 'ref',
+                        'pred'. Multiple choices are possible (comma separated)
+  --sent-wise-file SENT_WISE_FILE
+                        Path to a file where the sentence-wise accuracy scores get saved. For pickled output (list),
+                        the path must match /*.pkl/. Textual output is a comma-separated list
   --test-config TEST_CONFIG
                         Path to the file containing the test configurations
 ```
@@ -322,11 +325,44 @@ optional arguments:
 Example call:
 
 ```
-python3 src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file hidden/predictions/8ae3fd47.jsonl --pred-file hidden/predictions/8ae3fd47.jsonl --ref-field=norm --pred-field=pred -a both --test-config 9a61b7f5.toml >> hidden/eval.jsonl
+python3 src/transnormer/evaluation/evaluate.py \
+  --input-type jsonl --ref-file hidden/predictions/d037b975.jsonl \
+  --pred-file hidden/predictions/d037b975.jsonl \
+  --ref-field=norm --pred-field=pred -a both \
+  --sent-wise-file hidden/sent_scores/sent_scores_d037b975.pkl \
+  --test-config hidden/test_configs/d1b1ea77.toml \
+  >> hidden/eval.jsonl
 ```
 
 In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If the two versions (ref and pred) are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
 
+
+If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence/example-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
+
+```
+usage: add_sent_scores.py [-h] [-p PROPERTY] scores data
+
+Write sentence-wise accuracy scores stored SCORES to DATA (jsonl file)
+
+positional arguments:
+  scores                Scores file (either pickled (*.pkl) or comma-separated plain-text).
+  data                  Data file (JSONL)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PROPERTY, --property PROPERTY
+                        Name for the property in which the score gets stored (default: 'score')
+```
+
+Example call:
+
+```
+python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl
+```
+
+```
+python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
+```
 
 #### 3.2 Inspecting and analyzing outputs
 
