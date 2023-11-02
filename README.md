@@ -340,13 +340,18 @@ In this case, the gold normalizations ("ref") and auto-generated normalizations 
 If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence/example-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
 
 ```
-usage: add_sent_scores.py [-h] scores data
+usage: add_sent_scores.py [-h] [-p PROPERTY] scores data
 
 Write sentence-wise accuracy scores stored SCORES to DATA (jsonl file)
 
 positional arguments:
-  scores      Scores file (either pickled (*.pkl) or comma-separated plain-text).
-  data        Data file (JSONL)
+  scores                Scores file (either pickled (*.pkl) or comma-separated plain-text).
+  data                  Data file (JSONL)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PROPERTY, --property PROPERTY
+                        Name for the property in which the score gets stored (default: 'score')
 ```
 
 Example call:
@@ -355,7 +360,9 @@ Example call:
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl
 ```
 
-
+```
+python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
+```
 
 #### 3.2 Inspecting and analyzing outputs
 

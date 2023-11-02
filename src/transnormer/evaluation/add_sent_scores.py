@@ -37,6 +37,13 @@ def parse_arguments(
         "data",
         help="Data file (JSONL)",
     )
+    parser.add_argument(
+        "-p",
+        "--property",
+        type=str,
+        default="score",
+        help="Name for the property in which the score gets stored (default: 'score')",
+    )
 
     args = parser.parse_args(arguments)
     return args
@@ -60,7 +67,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
     # Update data and write to file
     for record, score in zip(data, scores):
-        record["score"] = score
+        record[args.property] = score
     write_jsonl(data, args.data)
 
     return
