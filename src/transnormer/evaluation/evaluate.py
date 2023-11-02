@@ -123,6 +123,12 @@ def main(arguments: Optional[List[str]] = None) -> None:
         ref = read_plain_text_file(args.ref_file)
         pred = read_plain_text_file(args.pred_file)
 
+    # # Optional: Apply transformation to ref and pred
+    # # TODO: this should be a command-line option (pass transformation code snippet?)
+    # transformation = lambda s: s.lower()
+    # ref = [transformation(s) for s in ref]
+    # pred = [transformation(s) for s in pred]
+
     align_types = args.align_types.split(",")
 
     metrics = get_metrics(ref, pred, align_types)
