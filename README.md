@@ -17,6 +17,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [Preparation 2: Data preprocessing](#preparation-2-data-preprocessing)
     - [1. Model training](#1-model-training)
       - [Training config file](#training-config-file)
+      - [Resume training a model](#resume-training-a-model)
     - [2. Generating normalizations](#2-generating-normalizations)
       - [Test config file](#test-config-file)
       - [Unique names for config and prediction files](#unique-names-for-config-and-prediction-files)
@@ -236,6 +237,12 @@ The `[training_hyperparams]` section encompasses essential training parameters, 
 ##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
 
 The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
+
+#### Resume training a model
+
+To resume fine-tuning a model that is already the product of fine-tuning (called 'checkpoint-X' henceforth), simply provide the path to checkpoint-X under `language_models` in `training_config.toml`. The model resulting from further fine-tuning os called checkpoint-Y, accordingly. It was created like this:
+`original-pretrained-model (e.g. `byt5-small`) -> checkpoint-X -> checkpoint-Y`. Thus, in order to be able to keep track of the full provenance of checkpoint-Y, we must not only keep checkpoint-Y's `training_config.toml` but also keep the directory where checkpoint-X and its `training_config.toml` is located.
+
 
 ### 2. Generating normalizations
 
