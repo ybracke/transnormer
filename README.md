@@ -240,8 +240,12 @@ The `[beam_search_decoding]` section contains parameters related to beam search 
 
 #### Resume training a model
 
-To resume fine-tuning a model that is already the product of fine-tuning (called 'checkpoint-X' henceforth), simply provide the path to checkpoint-X under `language_models` in `training_config.toml`. The model resulting from further fine-tuning os called checkpoint-Y, accordingly. It was created like this:
-`original-pretrained-model (e.g. `byt5-small`) -> checkpoint-X -> checkpoint-Y`. Thus, in order to be able to keep track of the full provenance of checkpoint-Y, we must not only keep checkpoint-Y's `training_config.toml` but also keep the directory where checkpoint-X and its `training_config.toml` is located.
+We may want to fine-tune a model that is already the product of fine-tuning. We call the first fine-tuned model 'checkpoint-X' and the second model 'checkpoint-Y'. To train checkpoint-Y from checkpoint-X simply add the path to checkpoint-X under `language_models` in `training_config.toml`.
+
+To clarify, checkpoint-Y was created like this:
+```original pretrained model (e.g. byt5-small) -> checkpoint-X -> checkpoint-Y```
+
+Thus, in order to keep track of the full provenance of checkpoint-Y, we must not only keep checkpoint-Y's `training_config.toml` but also keep the directory where checkpoint-X and its `training_config.toml` is located.
 
 
 ### 2. Generating normalizations
