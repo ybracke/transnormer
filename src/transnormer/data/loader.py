@@ -336,9 +336,15 @@ def load_data(
             # dname = "germanc_gs"
             # split = _find_split(path)
 
-        elif "deu_news_2020" in path:
+        elif "deu_news_" in path:
             o = read_leipzig_raw(path)
-            dname = "deu_news_2020"
+            match = re.search(r"20\d\d", path)
+            if match:
+                dname = "deu_news_" + match.group(0)
+            else:
+                raise ValueError(
+                    "There should be a year >=2000 in the path for this corpus."
+                )
             split = _find_split(path)
 
         elif "dtak" in path:
@@ -426,8 +432,10 @@ def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
     all_sents = []
     for docpath in filepath_gen(path):
         # Load document
+        doc = []
         with open(docpath, "r", encoding="utf-8") as f:
-            doc = f.readlines()
+            for line in f:
+                doc.append(line.strip())
         # Collect all sentences in list
         all_sents.extend(doc)
 
