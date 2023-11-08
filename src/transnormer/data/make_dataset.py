@@ -37,8 +37,7 @@ def save_to_jsonl(paths: List[str], parent_dir: str) -> None:
             target_file = os.path.join(target_dir, f"{name}-{split}.jsonl")
         else:
             target_file = os.path.join(target_dir, f"{name}.jsonl")
-        # Note: non-ASCII chars are escaped with method ".to_json"
-        ds.to_json(target_file)
+        ds.to_json(target_file, force_ascii=False)
 
 
 def parse_arguments(arguments: Optional[List[str]] = None) -> argparse.Namespace:
