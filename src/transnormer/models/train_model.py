@@ -2,17 +2,14 @@
 import os
 import random
 import shutil
-
-# import time
-import tomli
-
 from typing import Any, Dict, Tuple
 
+
+import tomli
 import datasets
 import numpy as np
 import torch
 
-# from torch.utils.data import DataLoader
 import transformers
 from transnormer.data import loader, process
 from transnormer.preprocess import translit
@@ -53,6 +50,24 @@ def load_tokenizers(
 ) -> Tuple[transformers.PreTrainedTokenizerBase, transformers.PreTrainedTokenizerBase]:
     """Load two tokenizer objects based on config dictionary and possibly replace the input tokenizer's normalization component with a custom transliterator"""
 
+    # (A) If tokenizer is given explicitly in config file
+    # Load tokenizers
+    if "tokenizer_input" in configs["tokenizer"]:
+        # Load input tokenizer
+        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+            configs["tokenizer"]["tokenizer_input"]
+        )
+        if "tokenizer_output" in configs["tokenizer"]:
+            # Load output tokenizer
+            tokenizer_output = transformers.AutoTokenizer.from_pretrained(
+                configs["tokenizer"]["tokenizer_output"]
+            )
+        else:
+            # Output tokenizer is simply a reference to input tok
+            tokenizer_output = tokenizer_input
+        return tokenizer_input, tokenizer_output
+
+    # (B) tokenizer not explicitly stated in config file, but via language model
     # (1) Load tokenizers
     if "checkpoint_encoder_decoder" in configs["language_models"]:
         tokenizer_input = transformers.AutoTokenizer.from_pretrained(
