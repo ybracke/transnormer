@@ -136,18 +136,20 @@ def main(arguments: Optional[List[str]] = None) -> None:
     # In case we computed sentence-wise scores: store them in file
     # Currently only accepts harmonized accuracy ("both")
     sent_wise_scores = metrics.pop("per_sent").get("both")
-    pickle_output = re.match(r".*.pkl", args.sent_wise_file)
-    if pickle_output:
-        with open(args.sent_wise_file, "wb") as f:
-            pickle.dump(sent_wise_scores, f)
-    else:
-        with open(args.sent_wise_file, "w", encoding="utf-8") as f:
-            f.write(",".join([str(score) for score in sent_wise_scores]))
+    if args.sent_wise_file:
+        pickle_output = re.match(r".*.pkl", args.sent_wise_file)
+        if pickle_output:
+            with open(args.sent_wise_file, "wb") as f:
+                pickle.dump(sent_wise_scores, f)
+        else:
+            with open(args.sent_wise_file, "w", encoding="utf-8") as f:
+                f.write(",".join([str(score) for score in sent_wise_scores]))
 
     output = {"pred-file": args.pred_file, "ref-file": args.ref_file}
     if args.test_config:
         output["test-config"] = args.test_config
     output.update(metrics)
+
     print(json.dumps(output))
 
     return
