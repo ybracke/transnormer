@@ -126,8 +126,13 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
     # Sort by length
     dataset = ds["train"]
+    index_column = "#"
     dataset = sort_dataset_by_length(
-        dataset, "orig", descending=True, keep_length_column=False
+        dataset,
+        "orig",
+        descending=True,
+        keep_length_column=False,
+        name_index_column=index_column,
     )
     ds["train"] = dataset
 
@@ -138,6 +143,10 @@ def main(arguments: Optional[List[str]] = None) -> None:
         batch_size=CONFIGS["generation"]["batch_size"],
         load_from_cache_file=False,
     )
+
+    # If sorted by length: Restore original order
+    ds["train"] = ds["train"].sort(index_column)
+    ds["train"] = ds["train"].remove_columns(index_column)
 
     # (7) Save outputs
     ds["train"].to_json(args.out, force_ascii=False)
