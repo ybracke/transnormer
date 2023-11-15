@@ -310,7 +310,7 @@ def load_data(
 
     for path in paths:
         # Call read_ function depending on dataset
-        if "dtaeval" in path:
+        if ("dtaeval" in path) and ("without" not in path):
             # TODO|s
             # - Is the match check for the dataset path/name okay like this?
             # - Same question for _find_split
