@@ -222,21 +222,24 @@ Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_exampl
 
 ##### 4. Tokenizer Configuration <!-- omit in toc -->
 
-The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can adjust `max_length_input` and `max_length_output` to define the maximum token lengths for input and output sequences. This section also provides the option to specify an `input_transliterator` for transliteration purposes.
+The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can specify `tokenizer_input` and `tokenizer_output` models. If you omit `tokenizer_output`, `tokenizer_input` will be used as the output tokenizer as well. If you omit `tokenizer_input`, the program will try to use the tokenizer of the checkpoint given under `language_model`.
+You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
+You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. You can set `max_length_output` to define the maximum token lengths of output sequences, though this is not recommended and the property might be removed.
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
-Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
-This section may change in the near future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
-
+Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as the base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
+This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
 
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
-The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), and `learning_rate`. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
+The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs) ~~, and `learning_rate`~~ (not actually used). You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
+This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/88).
 
 ##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
 
 The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
+This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/89).
 
 #### Resume training a model
 
