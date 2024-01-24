@@ -24,6 +24,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [3. Evaluation](#3-evaluation)
       - [3.1 Metrics](#31-metrics)
       - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
+  - [Results](#results)
   - [Background](#background)
     - [Text+](#text)
     - [Description](#description)
@@ -304,7 +305,7 @@ mv preds.jsonl $filename
 
 #### 3.1 Metrics
 
-The script `src/transnormer/evaluation/evaluate.py` computes an accuracy score and the normalized Levenshtein distance.
+The script `src/transnormer/evaluation/evaluate.py` computes a harmonized accuracy score and the normalized Levenshtein distance. The metric and its computation are adopted from [Bawden et al. (2022)](https://github.com/rbawden/ModFr-Norm).
 
 ```
 usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
@@ -392,6 +393,20 @@ jq -r '.norm' ./8ae3fd47.jsonl > norm
 jq -r '.pred' ./8ae3fd47.jsonl > pred
 code --diff norm pred
 ```
+
+## Results
+
+**Note:** This section will be continously updated.
+
+Scores on a test set extracted from the [DTA EvalCorpus](https://kaskade.dwds.de/~moocow/software/dtaec/) (13 documents, ~18,000 sentences; ~400,000 tokens):
+
+| Method | WordAcc (sym) |
+| --- | --- |
+| identity | 79.59 |
+| translit | 93.91 |
+| transnormer | 98.58 |
+
+For the baseline method `identity` the historical text is simply treated as the normalization and compared to the gold normalization. The method `translit` is a version of `identity`, where extinct German graphemes are replaced by their modern counterparts (e.g. replaces every `ſ` with `s`). The `transnormer` model used here is a `byt5-small` model, with downstream training on a different section of the DTA EvalCorpus (~204K sentences).
 
 
 ## Background
