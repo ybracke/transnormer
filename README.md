@@ -196,7 +196,7 @@ In order to support reading in and converting a dataset to be used as training o
 
 1. Specify the training parameters in the [config file](#training-config-file)
 
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`  
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
 If you are using [`dvc`](#dvc) to track experiments: `$ nohup nice exp run --name <experiment-name> train &`, where `train` is the stage name for the training from `dvc.yaml` in the cwd. If you omit `train`, all stages are run.
 
 
@@ -218,7 +218,7 @@ The `random_seed` parameter defines a fixed random seed (`42` in the default set
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.  
+The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
@@ -399,12 +399,13 @@ code --diff norm pred
 
 Scores on a test set extracted from the [DTA EvalCorpus](https://kaskade.dwds.de/~moocow/software/dtaec/) (13 documents, ~18,000 sentences; ~400,000 tokens):
 
-| Method | WordAcc (sym) |
-| --- | --- |
-| identity | 79.59 |
-| translit | 93.91 |
-| transnormer | 98.58 |
+| Method | WordAcc | WordAcc (`-i`) |
+| --- | --- | --- |
+| identity | 79.59 | 79.80 |
+| translit | 93.91 | 94.17 |
+| transnormer | 98.93 | 99.18 |
 
+The metric used is the harmonized word accurracy explained [above](#31-metrics); `-i` denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalizaiton are ignored).
 For the baseline method `identity` the historical text is simply treated as the normalization and compared to the gold normalization. The method `translit` is a version of `identity`, where extinct German graphemes are replaced by their modern counterparts (e.g. replaces every `ſ` with `s`). The `transnormer` model used here is a `byt5-small` model, with downstream training on a different section of the DTA EvalCorpus (~204K sentences).
 
 
@@ -449,7 +450,7 @@ Overview of main changes `transnormer` makes as compared to `CAB`.
 
 ##### Sequence-to-sequence  <!-- omit in toc -->
 
-The `transnormer` models are sequence-to-sequence models. This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where the original text is first tokenized and then, secondly, each token is assigned a single label. 
+The `transnormer` models are sequence-to-sequence models. This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where the original text is first tokenized and then, secondly, each token is assigned a single label.
 
 As a consequence, `transnormer` can normalize word separation, e.g. normalize `gehts` to `geht es` and `aller Hand` to `allerhand`, while CAB cannot. CAB can only assign one label per token, i.e. would (at best) normalize `gehts` to the pseudo-token `geht_es` and normalize each token in `aller Hand` separately, thereby producing the suboptimal normalization `aller Hand`. In short, whitespace in output is no longer contingent on the tokenization of the input.
 
@@ -525,7 +526,7 @@ possibly evaluation metrics at a specific point in time.
 
 1. `dvc exp branch <branch-name> <exp-name>` will create a git branch from the
    experiment. It makes sense to give the branch the same name as the
-   experiment in order to associate them easily.  
+   experiment in order to associate them easily.
    (The experiment branch can be also created later from a hidden commit (see
    `dvc exp show --all-commits` to see all candidates). Note that the code in
    the experiment branch will be in the state as it was at the time of running
