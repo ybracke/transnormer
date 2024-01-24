@@ -29,7 +29,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [Text+](#text)
     - [Description](#description)
     - [CAB](#cab)
-      - [`transnormer` vs. CAB](#transnormer-vs-cab)
+      - [`transnormer` vs. `CAB`](#transnormer-vs-cab)
     - [Roadmap](#roadmap)
     - [More info](#more-info)
   - [Development](#development)
@@ -143,7 +143,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 Scripts and functions in `src/transnormer/data`
 
-TODO - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
+TODO (prio: low) - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
 
 
 #### `split_dataset.py` <!-- omit in toc -->
@@ -196,7 +196,7 @@ In order to support reading in and converting a dataset to be used as training o
 
 1. Specify the training parameters in the [config file](#training-config-file)
 
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`  
 If you are using [`dvc`](#dvc) to track experiments: `$ nohup nice exp run --name <experiment-name> train &`, where `train` is the stage name for the training from `dvc.yaml` in the cwd. If you omit `train`, all stages are run.
 
 
@@ -218,28 +218,33 @@ The `random_seed` parameter defines a fixed random seed (`42` in the default set
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.  
+
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
 ##### 4. Tokenizer Configuration <!-- omit in toc -->
 
 The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can specify `tokenizer_input` and `tokenizer_output` models. If you omit `tokenizer_output`, `tokenizer_input` will be used as the output tokenizer as well. If you omit `tokenizer_input`, the program will try to use the tokenizer of the checkpoint given under `language_model`.
+
 You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
 You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. You can set `max_length_output` to define the maximum token lengths of output sequences, though this is not recommended and the property might be removed.
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
 Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as the base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
+
 This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
 
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
 The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs) ~~, and `learning_rate`~~ (not actually used). You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
+
 This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/88).
 
 ##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
 
 The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
+
 This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/89).
 
 #### Resume training a model
@@ -276,13 +281,11 @@ python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
 
 #### Test config file
 
-**TODO**
-
-Refer to `test_config.toml` for a template. The format is similar to the [training config file](#training-config-file), but (currently) allows only a single test data file as input.
+The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
 
 #### Unique names for config and prediction files
 
-Rename and copy current test_config:
+Rename and copy current `test_config.toml`:
 
 ```bash
 # in the transformer directory call
@@ -339,7 +342,7 @@ optional arguments:
 
 Example call:
 
-```
+```bash
 python3 src/transnormer/evaluation/evaluate.py \
   --input-type jsonl --ref-file hidden/predictions/d037b975.jsonl \
   --pred-file hidden/predictions/d037b975.jsonl \
@@ -371,24 +374,20 @@ optional arguments:
 
 Example call:
 
-```
+```bash
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl
 ```
 
-```
+```bash
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
 ```
 
 #### 3.2 Inspecting and analyzing outputs
 
-**TODO**
-
-* Generations (or "predictions") were previously created with this Jupyter notebook: `notebooks/exploratory/inspect_predictions.ipynb`
-* Now that generating normalizations is handled elsewhere, the notebook should be updated so that it reads in JSONL files containing fields like "orig", "gold" and "pred" and applies the analysis functions
-* Could [Meld](https://meldmerge.org/) be helpful for a visual comparison of orig, gold and pred?
+**TODO**, see [this issue](https://github.com/ybracke/transnormer/issues/93)
 
 Use `jq` to create a text-only version from the JSONL files containing the predictions and then call `diff` on that. Example:
-```
+```bash
 jq -r '.norm' ./8ae3fd47.jsonl > norm
 jq -r '.pred' ./8ae3fd47.jsonl > pred
 code --diff norm pred
@@ -435,11 +434,11 @@ Intuition: We create a model from an encoder that knows a lot about historical
 
 This normalizer developed in this project is intended to become the successor of the normalizing component of the Cascaded Analysis Broker (CAB), developed at the BBAW by Bryan Jurish ([CAB webpage](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [CAB web service](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [Jurish (2012)](https://publishup.uni-potsdam.de/opus4-ubp/frontdoor/index/index/docId/5562)).
 
-CAB is based on a combination of hand-craftet rules, edit distances and hidden markov language models. TODO
+CAB utilizes hand-craftet rules, edit distances, lexicon checks hidden markov language models, and an exception lexicon.
 
-#### `transnormer` vs. CAB
+#### `transnormer` vs. `CAB`
 
-This project contains some changes compared to CAB.
+Overview of main changes `transnormer` makes as compared to `CAB`.
 
 ##### Machine learning  <!-- omit in toc -->
 
@@ -450,20 +449,18 @@ This project contains some changes compared to CAB.
 
 ##### Sequence-to-sequence  <!-- omit in toc -->
 
-The models trained with this project are sequence-to-sequence models (see [above](TODO)). This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where each token is assigned a single label ().
+The `transnormer` models are sequence-to-sequence models. This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where the original text is first tokenized and then, secondly, each token is assigned a single label. 
 
-Unlike CAB our program can apply re-tokenization (normalizing word separation). TODO: Take more info from [here](https://pad.gwdg.de/KEg0QOHJQUyH5wyyANxHBQ#), tokenization of the output is not contingent of tokenization of historic data
+As a consequence, `transnormer` can normalize word separation, e.g. normalize `gehts` to `geht es` and `aller Hand` to `allerhand`, while CAB cannot. CAB can only assign one label per token, i.e. would (at best) normalize `gehts` to the pseudo-token `geht_es` and normalize each token in `aller Hand` separately, thereby producing the suboptimal normalization `aller Hand`. In short, whitespace in output is no longer contingent on the tokenization of the input.
 
 ##### Leverage large language models  <!-- omit in toc -->
 
-TODO
-
-* Have better knowledge of language
-* Should deal with context better than CAB
+* Pretrained LLMs have general capabilities concerning language understanding derived from being trained on large quantities of textual data in one or more languages.
+* This knowledge should help the fine-tuned model to generalize better and deal better with context than CAB does.
 
 ##### Maintainability  <!-- omit in toc -->
 
-* We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. Huggingface), instead of in-house developments that are less well supported.
+* We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. [Huggingface](https://huggingface.co/)), instead of in-house developments that are less well supported.
 * We move away from a C- and Perl-based program to a Python-based program, which has a larger community of users and developers.
 
 ### Roadmap
@@ -528,7 +525,7 @@ possibly evaluation metrics at a specific point in time.
 
 1. `dvc exp branch <branch-name> <exp-name>` will create a git branch from the
    experiment. It makes sense to give the branch the same name as the
-   experiment in order to associate them easily.
+   experiment in order to associate them easily.  
    (The experiment branch can be also created later from a hidden commit (see
    `dvc exp show --all-commits` to see all candidates). Note that the code in
    the experiment branch will be in the state as it was at the time of running

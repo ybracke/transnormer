@@ -211,12 +211,6 @@ def test_read_ridges_raw():
     assert data == target_data
 
 
-def test_read_leipzig_raw():
-    path = "/home/bracke/code/transnormer/data/raw/leipzig-corpora/deu_news_2020_1M-sentences.txt"
-    d = loader.read_leipzig_raw(path)
-    print(len(d["orig"]))
-
-
 def test_load_data():
     paths = ["tests/testdata/dtaeval/xml"]
     for i, (dname, split, o) in enumerate(loader.load_data(paths)):
