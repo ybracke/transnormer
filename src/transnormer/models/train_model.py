@@ -1,4 +1,4 @@
-# from datetime import datetime
+import json
 import os
 import random
 import shutil
@@ -269,8 +269,36 @@ def train_seq2seq_model(
         tokenizer, padding=configs["tokenizer"]["padding"]
     )
 
+    # TODO: Should this class stay inside the function or not?
+    class Seq2SeqTrainerWithCustomLogging(transformers.Seq2SeqTrainer):
+        """Subclass of Seq2SeqTrainer with custom log function
+        to save loss scores directly during training.
+        """
+
+        def log(self, logs: Dict[str, float]) -> None:
+            """
+            Custom behavior: Additionally write the logs to the output file
+            history.log in the model directory
+            """
+            if self.state.epoch is not None:
+                logs["epoch"] = round(self.state.epoch, 2)
+
+            output = {**logs, **{"step": self.state.global_step}}
+            self.state.log_history.append(output)
+            # start of custom behavior
+            # TODO: Filepath to the log file should be specified elsewhere - what's best?
+            logfile = os.path.join(
+                output_dir, "history.log"
+            )  # output_dir comes from the superordinate function
+            with open(logfile, "a") as f:
+                f.write(json.dumps(output, indent=4) + "\n")
+            # end of custom behavior
+            self.control = self.callback_handler.on_log(
+                self.args, self.state, self.control, logs
+            )
+
     # Instantiate trainer
-    trainer = transformers.Seq2SeqTrainer(
+    trainer = Seq2SeqTrainerWithCustomLogging(
         model=model,
         args=training_args,
         data_collator=collator,
