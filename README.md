@@ -12,7 +12,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
   - [Usage](#usage)
     - [Quickstart](#quickstart)
       - [Quickstart Training](#quickstart-training)
-      - [Quickstart Evaluation](#quickstart-evaluation)
+      - [Quickstart Generation and Evaluation](#quickstart-generation-and-evaluation)
     - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
     - [Preparation 2: Data preprocessing](#preparation-2-data-preprocessing)
     - [1. Model training](#1-model-training)
@@ -111,11 +111,12 @@ To train a model you need the following resources:
 
 For more details, see [below](#1-model-training)
 
-#### Quickstart Evaluation
+#### Quickstart Generation and Evaluation
 
-1. Specify the test/generation parameters in the [test config file](#test-config-file)
-2. Run generation script: `$ python3 src/transnormer/models/generate.py -c test_config.toml -o <path-generations>`. This produces at JSONL file with generated normalizations at `<path-generations>`.
-3. Run evaluation script: `$ src/transnormer/evaluation/evaluate.py --input-type jsonl --ref-file <path-generations> --pred-file <path-generations> --ref-field=<name-gold> --pred-field=<name-pred> -a both`. This will print the evaluation metrics to stdout. In this example, it is assumed that `<path-generations>` contains both the gold and automatically generated normalizations (in the fields `name-gold` and `name-pred`, respectively).
+1. Specify the generation parameters in the [test config file](#test-config-file)
+2. If necessary adjust paths in `pred_eval.sh`. Then run: `bash pred_eval.sh`
+
+For more details, see sections on [Generation](#2-generating-normalizations) and [Evaluation](#3-evaluation).
 
 
 ### Preparation 1: Virtual environment
@@ -259,7 +260,13 @@ Thus, in order to keep track of the full provenance of checkpoint-Y, we must not
 
 ### 2. Generating normalizations
 
-The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file).
+The fastest way to create normalizations and get evaluation metrics is to run the bash script:
+`bash pred_eval.sh`
+This runs the scripts for generation and evaluation and performs the copy/rename operations described in the following.
+
+---
+
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file). This produces at JSONL file with generated normalizations.
 
 ```
 usage: generate.py [-h] [-c CONFIG] [-o OUT]
@@ -315,8 +322,7 @@ usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-
                    [--ref-field REF_FIELD] [--pred-field PRED_FIELD] -a ALIGN_TYPES [--sent-wise-file SENT_WISE_FILE]
                    [--test-config TEST_CONFIG]
 
-Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-type=both
-for a harmonized accuracy score.
+Compute evaluation metric(s) for string-to-string normalization (see Bawden et al. 2022). Choose --align-type=both for a harmonized accuracy score.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -352,10 +358,9 @@ python3 src/transnormer/evaluation/evaluate.py \
   >> hidden/eval.jsonl
 ```
 
-In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are located in the same file, therefore `--ref-file` and `--pred-file` take the same argument. If the two versions (ref and pred) are located in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.).
+In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. If `ref` and `pred` texts are stored in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.). Global evaluation metrics are printed to stdout by default and can be redirected, as in the example above.
 
-
-If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence/example-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
+If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
 
 ```
 usage: add_sent_scores.py [-h] [-p PROPERTY] scores data
