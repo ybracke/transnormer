@@ -5,8 +5,8 @@ import re
 
 from typing import List, Optional, Tuple
 
-from tokenise import basic_tokenise
-from wedit_distance_align import wedit_distance_align
+from .tokenise import basic_tokenise
+from .wedit_distance_align import wedit_distance_align
 
 
 def read_file(filename: str) -> List[str]:
