@@ -96,11 +96,13 @@ def word_acc(
 
 def word_acc_selected_target_types(
     alignments: List[List[Tuple[str, str, float]]],
-    selected_types: Set[str],
-    deselected_types: Set[str],
+    selected_types: Optional[Set[str]] = None,
+    deselected_types: Optional[Set[str]] = None,
 ) -> float:
     """Accuracy for selected target (i.e. normalized) types over the entire corpus, e.g.
     known or unknown types"""
+    if deselected_types is None:
+        deselected_types = set()
     correct_corpus, total_corpus = 0, 0
     for sent in alignments:
         correct_sent, total_sent = 0, 0
