@@ -1,8 +1,8 @@
 #!/usr/bin/python
 import Levenshtein
-from align_levenshtein import align
+from .align_levenshtein import align
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 
 
@@ -92,3 +92,65 @@ def word_acc(
         correct_corpus += correct_sent
         total_corpus += total_sent
     return correct_corpus / total_corpus, np.array(scores)
+
+
+def word_acc_selected_target_types(
+    alignments: List[List[Tuple[str, str, float]]],
+    selected_types: Set[str],
+    deselected_types: Set[str],
+) -> float:
+    """Accuracy for selected target (i.e. normalized) types over the entire corpus, e.g.
+    known or unknown types"""
+    correct_corpus, total_corpus = 0, 0
+    for sent in alignments:
+        correct_sent, total_sent = 0, 0
+        for word in sent:
+            # skip spaces
+            if word[0] == "":
+                continue
+            if word[0] in deselected_types:
+                continue
+            if selected_types is None or word[0] in selected_types:
+                if word[0] == word[1]:
+                    correct_sent += 1
+            total_sent += 1
+        correct_corpus += correct_sent
+        total_corpus += total_sent
+    return correct_corpus / total_corpus
+
+
+def word_acc_selected_source_types(
+    alignments_orig2gold: List[List[Tuple[str, str, float]]],
+    alignments_orig2pred: List[List[Tuple[str, str, float]]],
+    selected_types: Optional[Set[str]] = None,
+    deselected_types: Optional[Set[str]] = None,
+) -> float:
+    """
+    Accuracy for selected source (i.e. historical) types over the entire corpus, e.g.
+    known types, unknown types or ambiguous types (i.e. historical type with multiple possible normalizations).
+    """
+    if deselected_types is None:
+        deselected_types = set()
+    correct_corpus, total_corpus = 0, 0
+    for sent_orig2gold, sent_orig2pred in zip(
+        alignments_orig2gold, alignments_orig2pred
+    ):
+        correct_sent, total_sent = 0, 0
+        for (orig1, gold, _), (orig2, pred, _) in zip(sent_orig2gold, sent_orig2pred):
+            assert orig1 == orig2
+            # skip spaces
+            if orig1 == "":
+                continue
+            if orig1 in deselected_types:
+                continue
+            if selected_types is not None:
+                if orig1 in selected_types:
+                    if gold == pred:
+                        correct_sent += 1
+            else:
+                if gold == pred:
+                    correct_sent += 1
+            total_sent += 1
+        correct_corpus += correct_sent
+        total_corpus += total_sent
+    return correct_corpus / total_corpus
