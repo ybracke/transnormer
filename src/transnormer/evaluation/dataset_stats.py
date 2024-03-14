@@ -12,21 +12,19 @@ from transnormer.models import train_model
 
 
 def type_alignment_stats(
-    sents_src: List[str], sents_trg: List[str]
+    alignment: List[List[Tuple[str, str, float]]]
 ) -> Dict[str, Dict[str, int]]:
     """
-    Get the statistics for the token alignments in the two lists of sentences.
+    Get the statistics for the token alignments.
 
-    Order of the input arguments matters:
-    Call `type_alignment_stats(orig, norm)` for a orig-based tokenization
-    Call `type_alignment_stats(norm, orig)` for a norm-based tokenization
-    """
-
-    # Compute alignment orig->norm
-    alignment: List[List[Tuple[str, str, float]]] = align_levenshtein.align(
+    Alignments have to be computed like this:
+    ```
+    align_levenshtein.align(
         [tokenise.basic_tokenise(sent) for sent in sents_src],
         [tokenise.basic_tokenise(sent) for sent in sents_trg],
     )
+    ```
+    """
 
     stats = {}
     for sent in alignment:
@@ -98,8 +96,12 @@ def get_typestats_for_training_data(
         raise ValueError("Argument `src` must be one of {'norm', 'orig'}.")
 
     print(f"Computing the alignments. Current time: {datetime.now().time()}")
-    stats = type_alignment_stats(src_sents, trg_sents)
+    alignment = align_levenshtein.align(
+        [tokenise.basic_tokenise(sent) for sent in src_sents],
+        [tokenise.basic_tokenise(sent) for sent in trg_sents],
+    )
     print(f"Done computing the alignments. Current time: {datetime.now().time()}")
+    stats = type_alignment_stats(alignment)
 
     with open(outfile, "wb") as f:
         pickle.dump(stats, f)
