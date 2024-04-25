@@ -1,3 +1,4 @@
+import argparse
 import pickle
 import random
 from datetime import datetime
@@ -47,9 +48,7 @@ def get_typestats_for_training_data(
     configfile: str, outfile: str, src: str = "orig"
 ) -> None:
     """
-    Pass a path to a model and get the stats for the training data that belongs to this model.
-
-    The training data processing will be recreated from the training_config.toml.
+    Pass a config file for a model and get the stats for the training data that belong to this model.
 
     `src` must be one of {"orig", "norm"}
     """
@@ -107,3 +106,49 @@ def get_typestats_for_training_data(
         pickle.dump(stats, f)
 
     return
+
+
+def parse_and_check_arguments(
+    arguments: Optional[List[str]] = None,
+) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="""
+        Pass a config file for a model and get the type stats for the training data that belong to this model.
+
+        Type stats describe which types from the base layer are mapped onto which types from the other layer and how often this mapping occurs in the dataset.
+        The base layer is the base for the tokenization. Tokens on the other layer may be segmented in order to be mappable 1:1 onto base layer tokens. See Bawden et al. 2022.
+        The default base layer is "orig", so the mapping is orig->norm; change base layer to "norm" for the mapping norm->orig
+        """
+    )
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        required=True,
+        help="Path to the config file.",
+    )
+    parser.add_argument(
+        "-o",
+        "--out",
+        required=True,
+        help="Path to the output pickled file.",
+    )
+    parser.add_argument(
+        "-b",
+        "--base-layer",
+        help="Base layer for the alignment.",
+        choices=["orig", "norm"],
+        default="orig",
+    )
+    args = parser.parse_args(arguments)
+
+    return args
+
+
+def main(arguments: Optional[List[str]] = None) -> None:
+    args = parse_and_check_arguments(arguments)
+    get_typestats_for_training_data(args.config, args.out, args.base_layer)
+
+
+if __name__ == "__main__":
+    main()
