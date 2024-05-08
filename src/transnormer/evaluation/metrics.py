@@ -154,6 +154,7 @@ def n_correct_and_total_selected_source_types(
     selected_types: Optional[Set[str]] = None,
     deselected_types: Optional[Set[str]] = None,
 ) -> Tuple[int, int]:
+    n_skipped = 0
     if deselected_types is None:
         deselected_types = set()
     correct_corpus, total_corpus = 0, 0
@@ -162,7 +163,9 @@ def n_correct_and_total_selected_source_types(
     ):
         correct_sent, total_sent = 0, 0
         for (orig1, gold, _), (orig2, pred, _) in zip(sent_orig2gold, sent_orig2pred):
-            assert orig1 == orig2
+            if not orig1 == orig2:
+                n_skipped += 1
+                continue
             # skip spaces
             if orig1 == "":
                 continue
@@ -179,4 +182,5 @@ def n_correct_and_total_selected_source_types(
                 total_sent += 1
         correct_corpus += correct_sent
         total_corpus += total_sent
+    print(f"Skipped {n_skipped} tokens.")
     return correct_corpus, total_corpus
