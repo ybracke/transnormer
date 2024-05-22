@@ -1,4 +1,6 @@
 from transnormer.evaluation.dataset_stats import type_alignment_stats
+from transnormer.evaluation import align_levenshtein, tokenise
+
 
 SENTS_ORIG = [
     "Womit aber der von Fliſco nicht allerdings will einſtimmen.",
@@ -21,7 +23,11 @@ SENTS_PRED = [
 
 
 def test_type_alignment_stats() -> None:
-    filtered_stats = type_alignment_stats(SENTS_ORIG, SENTS_NORM)
+    alignments = align_levenshtein.align(
+        [tokenise.basic_tokenise(sent) for sent in SENTS_ORIG],
+        [tokenise.basic_tokenise(sent) for sent in SENTS_NORM],
+    )
+    filtered_stats = type_alignment_stats(alignments)
     target = {
         "Womit": {
             "Womit": 1,
