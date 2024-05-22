@@ -91,4 +91,6 @@ def word_acc(
         scores.append(correct_sent / total_sent)
         correct_corpus += correct_sent
         total_corpus += total_sent
+    if total_corpus == 0:
+        return 0, np.array(scores)
     return correct_corpus / total_corpus, np.array(scores)

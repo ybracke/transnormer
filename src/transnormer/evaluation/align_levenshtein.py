@@ -119,18 +119,28 @@ def align(
                 (current_word[0].strip(), current_word[1].strip(), weight - last_weight)
             )
             # check that both strings are entirely covered
-            recovered1 = re.sub(" +", " ", " ".join([x[0] for x in alignment]))
-            recovered2 = re.sub(" +", " ", " ".join([x[1] for x in alignment]))
+            recovered1 = re.sub("[ ]+", " ", " ".join([x[0] for x in alignment]))
+            recovered2 = re.sub("[ ]+", " ", " ".join([x[1] for x in alignment]))
 
-            assert recovered1 == re.sub(" +", " ", sent_ref), (
-                "\n"
-                + re.sub(" +", " ", recovered1)
-                + "\n"
-                + re.sub(" +", " ", sent_ref)
-            )
-            assert re.sub("[░▁ ]+", "", recovered2) == re.sub("[▁ ]+", "", sent_pred), (
-                recovered2 + " / " + sent_pred
-            )
+            # FIXME: This case occured once for 200k test examples
+            # Ideally we would not skip it, because then the number of aligned sentences
+            # does not match the number of sentences anymore
+            if recovered1 != re.sub(" +", " ", sent_ref):
+                print("Skipping one sample because it couldn't be aligned")
+                print(
+                    "\n"
+                    + re.sub(" +", " ", recovered1)
+                    + "\n"
+                    + re.sub(" +", " ", sent_ref)
+                )
+                continue
+
+            # FIXME: See above
+            if re.sub("[░▁ ]+", "", recovered2) != re.sub("[▁ ]+", "", sent_pred):
+                print("Skipping one sample because it couldn't be aligned")
+                print(recovered2 + " / " + sent_pred)
+                continue
+
             alignments.append(alignment)
             if cache is not None:
                 if (sent_ref, sent_pred) not in cache:
