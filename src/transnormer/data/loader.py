@@ -409,7 +409,7 @@ def read_ridges_raw(path: str) -> Dict[str, List[str]]:
         # The two elements in the outermost list are orig and norm columns
         doc_tok = load_tsv_to_lists(docpath, keep_sentences=True)
         # Sentences are converted from List[str] to str
-        doc = detokenize_doc(doc_tok)
+        doc = detokenize_doc(doc_tok)  # type: ignore[arg-type]
         # Collect all sentences in list
         all_sents_orig.extend([sent for sent in doc[0]])
         all_sents_norm.extend([sent for sent in doc[1]])
