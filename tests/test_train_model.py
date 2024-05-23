@@ -255,7 +255,6 @@ def test_filter_dataset_dict_for_length() -> None:
     filtered_dataset_dict = train_model.filter_dataset_dict_for_length(
         dataset_dict, CONFIGS
     )
-    print(filtered_dataset_dict["train"]["length"])
     assert len(filtered_dataset_dict["train"]) == 2
 
     # set an additional max_length_input
@@ -711,6 +710,7 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
         "data": {
             "paths_train": [
                 "tests/testdata/jsonl/ascii-reverse.jsonl",
+                "tests/testdata/jsonl/ascii-reverse.jsonl",
                 # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
             "paths_validation": [
@@ -722,6 +722,7 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
                 # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
             "n_examples_train": [
+                1,
                 1,
             ],
             "n_examples_validation": [
@@ -739,12 +740,13 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
         },
         "training_hyperparams": {
             "batch_size": 1,
-            "epochs": 1,
+            "epochs": 2,
             # "learning_rate" : 0.001,
-            "logging_steps": 1,
-            "eval_steps": 1,
+            "logging_steps": 1000,
+            "eval_steps": 1000,
+            "save_strategy": "epoch",
             "eval_strategy": "steps",
-            "save_steps": 1,
+            "logging_strategy": "steps",
             "fp16": False,  # set to False for byT5-based models
         },
         "beam_search_decoding": {
@@ -779,7 +781,6 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
         assert name_mo == name_mn
         if not torch.equal(params_mo, params_mn):
             unequal_states.append(name_mo)
-    print(len(unequal_states))
     assert len(unequal_states) > 0
     # Remove files that were created during training
     for root, dirs, files in os.walk(output_dir, topdown=False):
@@ -832,12 +833,13 @@ def test_train_seq2seq_model_separate_encoder_and_decoder() -> None:
         },
         "training_hyperparams": {
             "batch_size": 1,
-            "epochs": 1,
-            "logging_steps": 1,
-            "eval_steps": 1,
-            "eval_strategy": "steps",
-            "save_steps": 1,
+            "epochs": 2,
             "fp16": True,
+            "save_strategy": "epoch",
+            "eval_strategy": "steps",
+            "logging_strategy": "steps",
+            "eval_steps": 1000,
+            "logging_steps": 1000,
         },
         "beam_search_decoding": {
             "no_repeat_ngram_size": 3,

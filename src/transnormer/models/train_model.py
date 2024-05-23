@@ -1,4 +1,5 @@
 # from datetime import datetime
+import math
 import os
 import random
 import shutil
@@ -254,20 +255,32 @@ def train_seq2seq_model(
     training_args = transformers.Seq2SeqTrainingArguments(
         output_dir=output_dir,
         predict_with_generate=True,
-        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
-        fp16=configs["training_hyperparams"]["fp16"],
-        eval_steps=configs["training_hyperparams"]["eval_steps"],
         num_train_epochs=configs["training_hyperparams"]["epochs"],
         per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
-        save_steps=configs["training_hyperparams"]["save_steps"],
-        logging_steps=configs["training_hyperparams"]["logging_steps"],
+        fp16=configs["training_hyperparams"]["fp16"],
         group_by_length=True,
+        save_strategy=configs["training_hyperparams"]["save_strategy"],
+        logging_strategy=configs["training_hyperparams"]["logging_strategy"],
+        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
+        logging_steps=configs["training_hyperparams"]["logging_steps"],
+        eval_steps=configs["training_hyperparams"]["eval_steps"],
     )
 
     collator = transformers.DataCollatorForSeq2Seq(
         tokenizer, padding=configs["tokenizer"]["padding"]
     )
+
+    class CustomCallback(transformers.TrainerCallback):
+        def on_step_end(self, args, state, control, **kwargs):
+            """Evaluate and log every half epoch"""
+            # Determine steps per epoch
+            steps_per_epoch = math.ceil(
+                len(train_dataset) / (args.per_device_train_batch_size * args._n_gpu)
+            )
+            if state.global_step % (max(2, steps_per_epoch) // 2) == 0:
+                control.should_log = True
+                control.should_evaluate = True
 
     # Instantiate trainer
     trainer = transformers.Seq2SeqTrainer(
@@ -276,6 +289,7 @@ def train_seq2seq_model(
         data_collator=collator,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        callbacks=[CustomCallback],
     )
 
     # Run training
@@ -343,10 +357,5 @@ if __name__ == "__main__":
         MODELDIR,
     )
 
-    # (6) Saving the final model
-
-    model_path = os.path.join(MODELDIR, "model_final/")
-    model.save_pretrained(model_path)
-
-    # (7) Save the config file to model directory
+    # (6) Save the config file to model directory
     shutil.copy(CONFIGFILE, MODELDIR)
