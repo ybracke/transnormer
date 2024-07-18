@@ -293,7 +293,22 @@ def train_seq2seq_model(
     )
 
     # Run training
-    trainer.train()
+    train_result = trainer.train()
+
+    # After training
+    trainer.save_model()
+    trainer.create_model_card()
+    trainer.save_state()
+
+    metrics = train_result.metrics
+    metrics["train_samples"] = len(train_dataset)
+    trainer.log_metrics("train", metrics)
+    trainer.save_metrics("train", metrics)
+
+    metrics = trainer.evaluate(metric_key_prefix="eval")
+    metrics["eval_samples"] = len(eval_dataset)
+    trainer.log_metrics("eval", metrics)
+    trainer.save_metrics("eval", metrics)
 
     return None
 
