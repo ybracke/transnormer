@@ -14,7 +14,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
       - [Quickstart Training](#quickstart-training)
       - [Quickstart Generation and Evaluation](#quickstart-generation-and-evaluation)
     - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
-    - [Preparation 2: Data preprocessing](#preparation-2-data-preprocessing)
+    - [Preparation 2: Data preparation](#preparation-2-data-preparation)
     - [1. Model training](#1-model-training)
       - [Training config file](#training-config-file)
       - [Resume training a model](#resume-training-a-model)
@@ -30,14 +30,6 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [Description](#description)
     - [CAB](#cab)
       - [`transnormer` vs. `CAB`](#transnormer-vs-cab)
-    - [Roadmap](#roadmap)
-    - [More info](#more-info)
-  - [Development](#development)
-    - [Contributing](#contributing)
-    - [Testing](#testing)
-    - [DVC](#dvc)
-      - [Versioning data and models](#versioning-data-and-models)
-      - [Tracking experiments](#tracking-experiments)
   - [License](#license)
 
 
@@ -140,57 +132,9 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
 
 
-### Preparation 2: Data preprocessing
+### Preparation 2: Data preparation
 
-Scripts and functions in `src/transnormer/data`
-
-TODO (prio: low) - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
-
-
-#### `split_dataset.py` <!-- omit in toc -->
-
-```
-usage: split_dataset.py [-h] [-o OUT] [-v VALIDATION_SET_SIZE] [-t TEST_SET_SIZE]
-                        [--random-state RANDOM_STATE]
-                        file
-
-Create genre-stratified train, validation and test splits of the DTA for a specific time
-frame.
-
-positional arguments:
-  file                  Input file (JSON Lines).
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -o OUT, --out OUT     Path to the output file (JSON Lines).
-  -v VALIDATION_SET_SIZE, --validation-set-size VALIDATION_SET_SIZE
-                        Size of the validation set as a fraction of the total data.
-  -t TEST_SET_SIZE, --test-set-size TEST_SET_SIZE
-                        Size of the test set as a fraction of the total data.
-  --random-state RANDOM_STATE
-                        Seed for the random state (default: 42).
-```
-
-#### `make_dataset.py` <!-- omit in toc -->
-
-```
-usage: make_dataset.py [-h] [-t TARGET] DATASET [DATASET ...]
-
-Convert datasets from raw format to JSON Lines
-
-positional arguments:
-  DATASET               Path(s) to dataset(s)
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -t TARGET, --target TARGET
-                        Path to target directory
-```
-
-#### `read_*` function <!-- omit in toc -->
-
-In order to support reading in and converting a dataset to be used as training or test data, there has to be a `read_*` function in `loader.py` (e.g. `read_dtaeval_raw`).The `read_*` function must return a dict that looks like this:
-`{ "orig" : List[str], "norm" : List[str]}`. Additional dict entries might be metadata, e.g. `"year" : List[int]`, `"document" : List[str]`.
+See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 
 ### 1. Model training
@@ -468,91 +412,6 @@ As a consequence, `transnormer` can normalize word separation, e.g. normalize `g
 
 * We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. [Huggingface](https://huggingface.co/)), instead of in-house developments that are less well supported.
 * We move away from a C- and Perl-based program to a Python-based program, which has a larger community of users and developers.
-
-### Roadmap
-
-### More info
-
-## Development
-
-### Contributing
-
-TODO
-
-### Testing
-
-TODO
-
-### DVC
-
-This project uses [DVC](https://dvc.org/doc) for (1) versioning data and model
-files (2) tracking experiments.
-
-#### Versioning data and models
-
-Large data and model files are versioned with DVC and do not get tracked by git.
-Instead, only a hash (stored in a text file) is tracked by git, either in a
-`<dataname>.dvc` or in `dvc.lock` are tracked by git.
-
-`dvc list . --dvc-only --recursive` shows the files tracked by DVC
-
-`dvc push` moves a specific version of the data to the remote storage.
-
-
-#### Tracking experiments
-
-DVC is also used for tracking experiments to make models reproducible and to
-separate code development from experiments. Each DVC experiment is a snapshot of
-the state of the code, the configs, the trained model resulting from these, and
-possibly evaluation metrics at a specific point in time.
-
-##### Workflow: Run experiment <!-- omit in toc -->
-
-1. Make sure any recent changes to the code are committed
-2. Set parameters in the config file (`training_config.toml`)
-3. Make sure `dvc.yaml` is still up-to-date (i.e. contains all dependencies,
-  parameters, output locations, etc.)
-4. Run the training with `dvc exp run`
-   * You can also set parameters in the config file at this stage with
-     `--set-params|-S`. Example:
-     `dvc exp run -S 'training_config.toml:training_hyperparams.save_steps=50'`)
-5. Do `dvc exp run [--name <exp-name>]`
-   (1) creates a new version of the model;
-   (2) modifies `dvc.lock`. Instead of an individual `model.dvc` file for the
-  model, its path, md5, etc. are stored in `dvc.lock` under `outs`;
-  (3) creates a hidden commit that also contains the config and `dvc.lock` (i.e.
-  a link to the updated model).
-6. To push the new model version to the remote, do: `dvc push models/model`.
-7. `git restore .` will restore the updated `dvc.lock` and config files. You
-   don't have to git-commit these separately to git because this was already done
-   automatically in step 5.
-
-##### Workflow: Use a model from a specific experiment  <!-- omit in toc -->
-
-1. `dvc exp branch <branch-name> <exp-name>` will create a git branch from the
-   experiment. It makes sense to give the branch the same name as the
-   experiment in order to associate them easily.
-   (The experiment branch can be also created later from a hidden commit (see
-   `dvc exp show --all-commits` to see all candidates). Note that the code in
-   the experiment branch will be in the state as it was at the time of running
-   the experiment.)
-2. The experiment branch can now be used to analyze the model by running
-   inspection notebooks.
-3. Push the experiment branch to remote in order to be able to look at the
-   analyses notebooks on GitHub. Remove the experiment branch from remote or
-   alltogether if they are not needed them anymore (they can be recreated, see
-   point 1).
-4. You can reproduce the experiment (i.e. train the model again) either on the
-   experiment branch or if you did `dvc exp apply <exp-name>` (on branch `dev`).
-
-##### Experiments: Technical details / background  <!-- omit in toc -->
-
-An "experiment" in DVC is a set of changes to your data, code, and configuration
-that you want to track and reproduce. When you run `dvc exp run`, DVC
-will create a snapshot of your code and data, and save it as a hidden git
-commit. Technically: Experiments are custom Git references (found in
-`.git/refs/exps`) with one or more commits based on HEAD. These commits are
-hidden and not checked out by DVC and not pushed to git remotes either.
 
 
 ## License
