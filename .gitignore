@@ -58,7 +58,6 @@ target/
 
 # Data
 data/*
-!data/interim/
 
 # DotEnv configuration
 .env
