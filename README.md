@@ -14,7 +14,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
       - [Quickstart Training](#quickstart-training)
       - [Quickstart Generation and Evaluation](#quickstart-generation-and-evaluation)
     - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
-    - [Preparation 2: Data preprocessing](#preparation-2-data-preprocessing)
+    - [Preparation 2: Data preparation](#preparation-2-data-preparation)
     - [1. Model training](#1-model-training)
       - [Training config file](#training-config-file)
       - [Resume training a model](#resume-training-a-model)
@@ -132,57 +132,9 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
 
 
-### Preparation 2: Data preprocessing
+### Preparation 2: Data preparation
 
-Scripts and functions in `src/transnormer/data`
-
-TODO (prio: low) - Describe what they do (inspiration: https://github.com/clarinsi/csmtiser#data-preprocessing)
-
-
-#### `split_dataset.py` <!-- omit in toc -->
-
-```
-usage: split_dataset.py [-h] [-o OUT] [-v VALIDATION_SET_SIZE] [-t TEST_SET_SIZE]
-                        [--random-state RANDOM_STATE]
-                        file
-
-Create genre-stratified train, validation and test splits of the DTA for a specific time
-frame.
-
-positional arguments:
-  file                  Input file (JSON Lines).
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -o OUT, --out OUT     Path to the output file (JSON Lines).
-  -v VALIDATION_SET_SIZE, --validation-set-size VALIDATION_SET_SIZE
-                        Size of the validation set as a fraction of the total data.
-  -t TEST_SET_SIZE, --test-set-size TEST_SET_SIZE
-                        Size of the test set as a fraction of the total data.
-  --random-state RANDOM_STATE
-                        Seed for the random state (default: 42).
-```
-
-#### `make_dataset.py` <!-- omit in toc -->
-
-```
-usage: make_dataset.py [-h] [-t TARGET] DATASET [DATASET ...]
-
-Convert datasets from raw format to JSON Lines
-
-positional arguments:
-  DATASET               Path(s) to dataset(s)
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -t TARGET, --target TARGET
-                        Path to target directory
-```
-
-#### `read_*` function <!-- omit in toc -->
-
-In order to support reading in and converting a dataset to be used as training or test data, there has to be a `read_*` function in `loader.py` (e.g. `read_dtaeval_raw`).The `read_*` function must return a dict that looks like this:
-`{ "orig" : List[str], "norm" : List[str]}`. Additional dict entries might be metadata, e.g. `"year" : List[int]`, `"document" : List[str]`.
+See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 
 ### 1. Model training
