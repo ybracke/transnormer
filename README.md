@@ -141,8 +141,8 @@ See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 1. Specify the training parameters in the [config file](#training-config-file)
 
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first (see [Installation](#installation)).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
-If you are using [`dvc`](#dvc) to track experiments: `$ nohup nice exp run --name <experiment-name> train &`, where `train` is the stage name for the training from `dvc.yaml` in the cwd. If you omit `train`, all stages are run.
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first; see [Installation](#installation).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
+
 
 
 #### Training config file
