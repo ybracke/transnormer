@@ -27,6 +27,6 @@ batch_size = 8
 [generation_config]
 # See here for more options: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
 max_new_tokens = 2048
-early_stopping = true
+early_stopping = false
 length_penalty = 2.0 # length_penalty > 0.0 promotes longer sequences
 num_beams = 4
