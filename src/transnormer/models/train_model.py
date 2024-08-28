@@ -310,6 +310,9 @@ def train_seq2seq_model(
     trainer.log_metrics("eval", metrics)
     trainer.save_metrics("eval", metrics)
 
+    # Save tokenizer
+    tokenizer.save_pretrained(output_dir)
+
     return None
 
 
