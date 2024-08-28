@@ -7,8 +7,8 @@ gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 random_seed = 42
 
 [data]
-path_test = "data/interim/0_TEST/2_TEST.jsonl"
-# n_examples_test = 24
+path_test = "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-test.jsonl"
+n_examples_test = 200_000
 
 [tokenizer]
 checkpoint_in = "google/byt5-small"
@@ -19,7 +19,7 @@ truncation=false
 # max_length = None
 
 [model]
-checkpoint =  "models/models_2023-10-04/checkpoint-24000"
+checkpoint = "models/models_2024-08-22/checkpoint-612020"
 
 [generation]
 batch_size = 8
@@ -27,6 +27,6 @@ batch_size = 8
 [generation_config]
 # See here for more options: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
 max_new_tokens = 2048
-early_stopping = true
-length_penalty = 2.0 # length_penalty > 0.0 promotes longer sequences
 num_beams = 4
+early_stopping = false
+length_penalty = 2.0
