@@ -9,23 +9,32 @@ random_seed = 42
 # Data
 [data]
 paths_train = [
-    "/home/bracke/data/dtaec/jsonl/v03/1800-1899/ludwig_himmel_1856.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-train.jsonl",
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
 ]
 
 paths_validation = [
-    "/home/bracke/data/dtaec/jsonl/v03/1800-1899/ludwig_himmel_1856.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-validation.jsonl",
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
 ]
 
 paths_test = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-test.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-test.jsonl",
+    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
+    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
+    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
 ]
 n_examples_train = [
-    10_000,  # all
+    850_000,  # ~half
     # 10_000,
     # 1_000_000_000,
 ]
 n_examples_validation = [
-    1,  # don't
+    200_000,  # all
     # 1_000_000_000,
     # 1_000_000_000,
 ]
@@ -40,19 +49,18 @@ n_examples_test = [
 padding = "longest"
 min_length_input = 0
 max_length_input = 512
-input_tokenizer = "google/byt5-small"
 # max_length_output = 512
 # input_transliterator = "Transliterator1"
 
 # Base model(s)
 [language_models]
-checkpoint_encoder_decoder = "models/models_2024-08-22/checkpoint-612020"
+checkpoint_encoder_decoder = "google/byt5-small"
 # checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
 # checkpoint_decoder = "bert-base-multilingual-cased"
 
 [training_hyperparams]
 batch_size = 8
-epochs = 3
+epochs = 10
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
@@ -60,8 +68,8 @@ eval_strategy = "steps"
 logging_strategy = "steps"
 # dummy values for eval_steps and logging_steps will be ignored
 # instead evaluates/logs twice per epoch (via CustomCallback)
-eval_steps = 100_000_000
-logging_steps = 100_000_000
+eval_steps = 1000000
+logging_steps = 100000
 
 # Parameters for beam search decoding
 # see https://huggingface.co/blog/how-to-generate and https://huggingface.co/16transformers/v4.10.1/main_classes/model.html
@@ -69,6 +77,6 @@ logging_steps = 100_000_000
 # https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
 [beam_search_decoding]
 no_repeat_ngram_size = 0
-early_stopping = false
+early_stopping = true
 length_penalty = 2.0
 num_beams = 4

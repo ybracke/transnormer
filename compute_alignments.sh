@@ -3,15 +3,10 @@
 # Exit in case of errors
 set -e
 
-# Adjust model name
-MODELSDIRNAME=models_2024-03-21
-
-
-# Paths
-TRAINCFG=/home/bracke/code/transnormer/models/$MODELSDIRNAME/training_config.toml
-OUT1=/home/bracke/code/transnormer/hidden/statistics/typestats-orig2norm-$MODELSDIRNAME.pkl
-# uncomment this and final line, if needed
-# OUT2=/home/bracke/code/transnormer/hidden/statistics/typestats-norm2orig-$MODELSDIRNAME.pkl
+# Paths (adjust if needed)
+TRAINCFG=/home/bracke/code/transnormer/models/models_2024-03-21/training_config.toml
+OUT1=/home/bracke/code/transnormer/hidden/statistics/typestats-orig2norm-dtak-v03-1600-1699-750k-maxlen512byt5
+OUT2=/home/bracke/code/transnormer/hidden/statistics/typestats-norm2orig-dtak-v03-1600-1699-750k-maxlen512byt5
 
 # Prepare conda environment
 CONDA_BASE=$(conda info --base)
@@ -22,4 +17,4 @@ export CUDA_VISIBLE_DEVICES=1
 
 # Create generations based on ./test_config.toml
 python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT1 --base-layer orig
-# python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT2 --base-layer norm
+python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT2 --base-layer norm
