@@ -6,35 +6,38 @@ gpu = "cuda:0"  # do `export CUDA_VISIBLE_DEVICES=1` when starting environment
 # Random seed (fix for reproducibility)
 random_seed = 42
 
+# Output directory
+# outdir = "./models/model"
+
 # Data
 [data]
 paths_train = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-train.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-train.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
 ]
 
 paths_validation = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-validation.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
 ]
 
 paths_test = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/new/dtak-not-dtaec-1700-1799-test.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
 ]
 n_examples_train = [
-    850_000,  # ~half
+    130_000,  # all
     # 10_000,
     # 1_000_000_000,
 ]
 n_examples_validation = [
-    200_000,  # all
+    50_000,  # all
     # 1_000_000_000,
     # 1_000_000_000,
 ]
@@ -46,6 +49,7 @@ n_examples_test = [
 ]
 
 [tokenizer]
+tokenizer = "google/byt5-small"
 padding = "longest"
 min_length_input = 0
 max_length_input = 512
@@ -55,12 +59,11 @@ max_length_input = 512
 # Base model(s)
 [language_models]
 checkpoint_encoder_decoder = "google/byt5-small"
-# checkpoint_encoder = "dbmdz/bert-base-historic-multilingual-cased"
-# checkpoint_decoder = "bert-base-multilingual-cased"
 
 [training_hyperparams]
 batch_size = 8
-epochs = 10
+# gradient_accumulation_steps = 4
+epochs = 5
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
@@ -68,13 +71,12 @@ eval_strategy = "steps"
 logging_strategy = "steps"
 # dummy values for eval_steps and logging_steps will be ignored
 # instead evaluates/logs twice per epoch (via CustomCallback)
-eval_steps = 1000000
-logging_steps = 100000
+eval_steps = 100_000_000
+logging_steps = 100_000_000
+# outdir_path = "./models/model"
+
 
 # Parameters for beam search decoding
-# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/16transformers/v4.10.1/main_classes/model.html
-# These initial parameters were copied from
-# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
 [beam_search_decoding]
 no_repeat_ngram_size = 0
 early_stopping = false
