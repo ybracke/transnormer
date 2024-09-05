@@ -1,9 +1,9 @@
-# from datetime import datetime
+from datetime import datetime
 import math
 import os
 import random
 import shutil
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 
 import tomli
@@ -13,13 +13,11 @@ import torch
 
 import transformers
 from transnormer.data import loader, process
-from transnormer.preprocess import translit
 
 
 def tokenize_input_and_output(
     batch: Dict,
-    tokenizer_input: transformers.PreTrainedTokenizerBase,
-    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    tokenizer: transformers.PreTrainedTokenizerBase,
 ) -> Dict:
     """
     Tokenizes a `batch` of input and label strings. Assumes that input string
@@ -30,8 +28,8 @@ def tokenize_input_and_output(
     """
 
     # Tokenize the inputs and labels
-    inputs = tokenizer_input(batch["orig"])
-    outputs = tokenizer_output(batch["norm"])
+    inputs = tokenizer(batch["orig"])
+    outputs = tokenizer(batch["norm"])
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
@@ -39,86 +37,49 @@ def tokenize_input_and_output(
 
     # Make sure that the PAD token is ignored
     batch["labels"] = [
-        [-100 if token == tokenizer_output.pad_token_id else token for token in labels]
+        [-100 if token == tokenizer.pad_token_id else token for token in labels]
         for labels in batch["labels"]
     ]
 
     return batch
 
 
-def load_tokenizers(
-    configs: Dict[str, Any]
-) -> Tuple[transformers.PreTrainedTokenizerBase, transformers.PreTrainedTokenizerBase]:
-    """Load two tokenizer objects based on config dictionary and possibly replace the input tokenizer's normalization component with a custom transliterator"""
+def load_tokenizer(configs: Dict[str, Any]) -> transformers.PreTrainedTokenizerBase:
+    """Load tokenizer object based on config dictionary"""
+    tokenizer = None
 
     # (A) If tokenizer is given explicitly in config file
-    # Load tokenizers
-    if "tokenizer_input" in configs["tokenizer"]:
+    if "tokenizer" in configs["tokenizer"]:
         # Load input tokenizer
-        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
-            configs["tokenizer"]["tokenizer_input"]
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            configs["tokenizer"]["tokenizer"]
         )
-        if "tokenizer_output" in configs["tokenizer"]:
-            # Load output tokenizer
-            tokenizer_output = transformers.AutoTokenizer.from_pretrained(
-                configs["tokenizer"]["tokenizer_output"]
-            )
-        else:
-            # Output tokenizer is simply a reference to input tok
-            tokenizer_output = tokenizer_input
-        return tokenizer_input, tokenizer_output
+        return tokenizer
 
     # (B) tokenizer not explicitly stated in config file, but via language model
     # (1) Load tokenizers
     if "checkpoint_encoder_decoder" in configs["language_models"]:
-        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
             configs["language_models"]["checkpoint_encoder_decoder"]
         )
-        # Output tokenizer is simply a reference to input tok
-        tokenizer_output = tokenizer_input
-    else:
-        # (1.1) Load input tokenizer
-        tokenizer_input = transformers.AutoTokenizer.from_pretrained(
-            configs["language_models"]["checkpoint_encoder"]
-        )
-        # (1.2) Optional: replace tokenizer's normalization component with a custom transliterator
-        if "input_transliterator" in configs["tokenizer"]:
-            if configs["tokenizer"]["input_transliterator"] == "Transliterator1":
-                transliterator = translit.Transliterator1()
-            else:
-                transliterator = None
-            tokenizer_input = translit.exchange_transliterator(
-                tokenizer_input, transliterator
-            )
-        # (1.3) Load output tokenizer
-        tokenizer_output = transformers.AutoTokenizer.from_pretrained(
-            configs["language_models"]["checkpoint_decoder"]
-        )
-    return tokenizer_input, tokenizer_output
+
+    return tokenizer
 
 
 def tokenize_dataset_dict(
     dataset_dict: datasets.DatasetDict,
-    tokenizer_input: transformers.PreTrainedTokenizerBase,
-    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    tokenizer: transformers.PreTrainedTokenizerBase,
     configs,
 ) -> datasets.DatasetDict:
     """
     Tokenize the datasets in a DatasetDict as specified in the config file.
 
-    Also returns the loaded input and output tokenizers.
     """
-
-    tokenization_kwargs = {
-        "tokenizer_input": tokenizer_input,
-        "tokenizer_output": tokenizer_output,
-    }
 
     # Tokenize by applying map function to the DatasetDict
     prepared_dataset_dict = dataset_dict.map(
         tokenize_input_and_output,
-        fn_kwargs=tokenization_kwargs,
-        # remove_columns=["orig", "norm"],
+        fn_kwargs={"tokenizer": tokenizer},
         batched=True,
         batch_size=configs["training_hyperparams"]["batch_size"],
         load_from_cache_file=False,
@@ -179,54 +140,28 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
 
     dataset = ds_split_merged
 
-    # TODO: is this depcrecated?
-    # Optional: create smaller datasets from random examples
-    if "subset_sizes" in configs:
-        train_size = configs["subset_sizes"]["train"]
-        validation_size = configs["subset_sizes"]["validation"]
-        test_size = configs["subset_sizes"]["test"]
-        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
-        dataset["validation"] = (
-            dataset["validation"].shuffle().select(range(validation_size))
-        )
-        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
-
     return dataset
 
 
 def warmstart_seq2seq_model(
     configs: Dict[str, Any],
-    tokenizer_output: transformers.PreTrainedTokenizerBase,
+    tokenizer: transformers.PreTrainedTokenizerBase,
     device: torch.device,
 ) -> transformers.PreTrainedModel:
     """
     Load and configure an encoder-decoder model.
     """
 
-    if "checkpoint_encoder_decoder" in configs["language_models"]:
-        # TODO: the following is hacky because it only allows a T5-model as encoder_decoder
-        model = transformers.T5ForConditionalGeneration.from_pretrained(
-            configs["language_models"]["checkpoint_encoder_decoder"],
-        ).to(device)
-    else:
-        model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-            configs["language_models"]["checkpoint_encoder"],
-            configs["language_models"]["checkpoint_decoder"],
-        ).to(device)
+    model = transformers.T5ForConditionalGeneration.from_pretrained(
+        configs["language_models"]["checkpoint_encoder_decoder"],
+    ).to(device)
 
     # Setting the special tokens
-    if "checkpoint_encoder_decoder" in configs["language_models"]:
-        # TODO: the following is hacky because it only allows a T5-model as encoder_decoder
-        model.config.decoder_start_token_id = tokenizer_output.pad_token_id
-        model.config.eos_token_id = tokenizer_output.eos_token_id
-        model.config.pad_token_id = tokenizer_output.pad_token_id
-    else:
-        model.config.decoder_start_token_id = tokenizer_output.cls_token_id
-        model.config.eos_token_id = tokenizer_output.sep_token_id
-        model.config.pad_token_id = tokenizer_output.pad_token_id
+    model.config.decoder_start_token_id = tokenizer.pad_token_id
+    model.config.eos_token_id = tokenizer.eos_token_id
+    model.config.pad_token_id = tokenizer.pad_token_id
 
     # Params for beam search decoding
-    # model.config.max_length = configs["tokenizer"].get("max_length_output")
     model.config.no_repeat_ngram_size = configs["beam_search_decoding"][
         "no_repeat_ngram_size"
     ]
@@ -316,19 +251,31 @@ def train_seq2seq_model(
     return None
 
 
-ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
-)
-# TODO pass this on the command-line
-CONFIGFILE = os.path.join(ROOT, "training_config.toml")
+def main():
+    ROOT = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
+    )
+    CONFIGFILE = os.path.join(ROOT, "training_config.toml")
 
-
-if __name__ == "__main__":
     # (1) Preparations
     # Load configs
     with open(CONFIGFILE, mode="rb") as fp:
         CONFIGS = tomli.load(fp)
-    MODELDIR = os.path.join(ROOT, "./models/model")
+    outdir = CONFIGS["training_hyperparams"].get("output_dir")
+    if outdir is not None:
+        if os.path.isabs(outdir):
+            MODELDIR = outdir
+        else:
+            MODELDIR = os.path.join(ROOT, outdir)
+    else:
+        MODELDIR = os.path.join(
+            ROOT, f"./models/models_{datetime.today().strftime('%Y-%m-%d')}"
+        )
+    if not os.path.isdir(MODELDIR):
+        os.makedirs(MODELDIR)
+
+    # Save the config file to model directory
+    shutil.copy(CONFIGFILE, MODELDIR)
 
     # Fix seeds for reproducibilty
     random.seed(CONFIGS["random_seed"])
@@ -337,9 +284,9 @@ if __name__ == "__main__":
 
     # GPU set-up
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
-    # limit memory usage to 80%
+    # limit memory usage to 90%
     if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(0.8, device)
+        torch.cuda.set_per_process_memory_fraction(0.9, device)
 
     # (2) Load data
 
@@ -348,10 +295,8 @@ if __name__ == "__main__":
 
     # (3) Tokenize data
     print("Tokenizing and preparing the data ...")
-    tokenizer_input, tokenizer_output = load_tokenizers(CONFIGS)
-    prepared_dataset_dict = tokenize_dataset_dict(
-        dataset_dict, tokenizer_input, tokenizer_output, CONFIGS
-    )
+    tokenizer = load_tokenizer(CONFIGS)
+    prepared_dataset_dict = tokenize_dataset_dict(dataset_dict, tokenizer, CONFIGS)
 
     # (3.1) Optional: Filter data for length
     prepared_dataset_dict = filter_dataset_dict_for_length(
@@ -359,9 +304,8 @@ if __name__ == "__main__":
     )
 
     # (4) Load models
-
     print("Loading the pre-trained models ...")
-    model = warmstart_seq2seq_model(CONFIGS, tokenizer_output, device)
+    model = warmstart_seq2seq_model(CONFIGS, tokenizer, device)
 
     # (5) Training
 
@@ -370,10 +314,11 @@ if __name__ == "__main__":
         model,
         prepared_dataset_dict["train"],
         prepared_dataset_dict["validation"],
-        tokenizer_input,
+        tokenizer,
         CONFIGS,
         MODELDIR,
     )
 
-    # (6) Save the config file to model directory
-    shutil.copy(CONFIGFILE, MODELDIR)
+
+if __name__ == "__main__":
+    main()

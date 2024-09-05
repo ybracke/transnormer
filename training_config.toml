@@ -12,21 +12,21 @@ random_seed = 42
 # Data
 [data]
 paths_train = [
-    "/home/bracke/data/dtaec/jsonl/v03/aehrm-split/dtaec-train.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-train.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
 ]
 
 paths_validation = [
-    "/home/bracke/data/dtaec/jsonl/v03/aehrm-split/dtaec-dev.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
 ]
 
 paths_test = [
-    "/home/bracke/data/dtaec/jsonl/v03/aehrm-split/dtaec-test.jsonl",
+    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
@@ -58,12 +58,12 @@ max_length_input = 512
 
 # Base model(s)
 [language_models]
-# checkpoint_encoder_decoder = "google/byt5-small"
-checkpoint_encoder_decoder = "/home/bracke/code/transnormer/models/models_2024-08-15"
+checkpoint_encoder_decoder = "google/byt5-small"
 
 [training_hyperparams]
 batch_size = 8
-epochs = 10
+# gradient_accumulation_steps = 4
+epochs = 5
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
@@ -71,9 +71,10 @@ eval_strategy = "steps"
 logging_strategy = "steps"
 # dummy values for eval_steps and logging_steps will be ignored
 # instead evaluates/logs twice per epoch (via CustomCallback)
-eval_steps = 1000000
-logging_steps = 100000
+eval_steps = 100_000_000
+logging_steps = 100_000_000
 # outdir_path = "./models/model"
+
 
 # Parameters for beam search decoding
 [beam_search_decoding]

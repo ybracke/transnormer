@@ -75,9 +75,9 @@ def get_typestats_for_training_data(
     dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
 
     # (3) Tokenize data
-    tokenizer_input, tokenizer_output = train_model.load_tokenizers(CONFIGS)
+    tokenizer = train_model.load_tokenizer(CONFIGS)
     prepared_dataset_dict = train_model.tokenize_dataset_dict(
-        dataset_dict, tokenizer_input, tokenizer_output, CONFIGS
+        dataset_dict, tokenizer, CONFIGS
     )
 
     # (3.1) Optional: Filter data for length
