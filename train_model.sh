@@ -8,4 +8,4 @@ conda activate gpu-venv-transnormer
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 export CUDA_VISIBLE_DEVICES=1
 
-python3 src/transnormer/models/train_byt5model.py
+python3 src/transnormer/models/train_model.py

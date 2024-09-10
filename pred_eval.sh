@@ -18,8 +18,12 @@ conda activate gpu-venv-transnormer
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 export CUDA_VISIBLE_DEVICES=1
 
+echo "Started generating: $(date)"
+
 # Create generations based on ./test_config.toml
 python3 src/transnormer/models/generate.py -c test_config.toml --out $PATH_PRED
+
+echo "Finished generating: $(date)"
 
 # Rename test_config file to a unique name and copy
 fname_testcfg=`md5sum test_config.toml | head -c 8`.toml
@@ -30,6 +34,8 @@ echo "Test config stored here: $DIR_TESTCFG/$fname_testcfg"
 fname_preds=`md5sum $PATH_PRED | head -c 8`.jsonl
 mv $PATH_PRED $DIR_PRED/$fname_preds
 echo "Predictions stored here: $DIR_PRED/$fname_preds"
+
+echo "Started evaluation: $(date)"
 
 # Call evaluation script
 python3 src/transnormer/evaluation/evaluate.py \
@@ -43,3 +49,5 @@ python3 src/transnormer/evaluation/evaluate.py \
 
 # Store sentence scores with the predictions
 python3 src/transnormer/evaluation/add_sent_scores.py $DIR_SENTSCORES/sent_scores_${fname_preds%.*}.pkl $DIR_PRED/$fname_preds
+
+echo "Finished evaluation: $(date)"
