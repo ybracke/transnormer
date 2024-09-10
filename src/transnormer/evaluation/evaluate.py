@@ -3,13 +3,21 @@
 
 import argparse
 import json
-import re
+import os
 import pickle
+import re
 from typing import Any, Dict, List, Optional
 
 from transnormer.evaluation.metrics import word_acc_final as acc
 from transnormer.evaluation.metrics import lev_norm_corpuslevel as lev_norm_c
 from transnormer.evaluation import tokenise
+
+ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
+)
+CACHE = os.path.join(ROOT, ".cache/cached-alignments.pkl")
+if not os.path.isdir(os.path.dirname(CACHE)):
+    os.makedirs(os.path.dirname(CACHE))
 
 
 def read_jsonl_file(file_path: str, field_name: str) -> List[str]:
@@ -42,7 +50,7 @@ def get_metrics(
 
     metrics: Dict[str, Any] = {"n": len(ref)}
 
-    acc_scores = acc(ref_tok, pred_tok, align_types)
+    acc_scores = acc(ref_tok, pred_tok, align_types, cache_file=CACHE)
     metrics["acc_harmonized"] = acc_scores["both"] if "both" in align_types else None
     metrics["per_sent"] = acc_scores["per_sent"]
 
