@@ -146,7 +146,11 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
         num_examples = configs["data"][f"n_examples_{split}"]
         ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
         # Merge and resample datasets for this split
-        ds = loader.merge_datasets(ds2num_examples, seed=configs["random_seed"])
+        ds = loader.merge_datasets(
+            ds2num_examples,
+            seed=configs["random_seed"],
+            shuffle=configs["data"].get("do_shuffle", False),
+        )
         ds_split_merged[split] = ds
 
     dataset = ds_split_merged

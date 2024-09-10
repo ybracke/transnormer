@@ -483,7 +483,9 @@ def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]
 
 
 def merge_datasets(
-    dsets: Union[List[datasets.Dataset], Dict[datasets.Dataset, int]], seed: int
+    dsets: Union[List[datasets.Dataset], Dict[datasets.Dataset, int]],
+    seed: int,
+    shuffle: bool = True,
 ) -> datasets.Dataset:
     """
     Merge multiple datasets into a single dataset with optional resampling.
@@ -504,7 +506,12 @@ def merge_datasets(
             if n > ds.num_rows:
                 n = ds.num_rows
             # Shuffle and resample
-            dsets_resampled.append(ds.shuffle(seed=seed).select(range(n)))
+            if shuffle:
+                dset_resampled = ds.shuffle(seed=seed).select(range(n))
+            else:
+                dset_resampled = ds.select(range(n))
+            dsets_resampled.append(dset_resampled)
+
         merged_dataset = datasets.concatenate_datasets(dsets_resampled)
     else:
         raise TypeError("Argument `dsets` must be of type list or dict.")
