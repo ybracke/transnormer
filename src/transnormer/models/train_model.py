@@ -149,7 +149,7 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
         ds = loader.merge_datasets(
             ds2num_examples,
             seed=configs["random_seed"],
-            shuffle=configs["data"].get("do_shuffle", False),
+            shuffle=configs["data"].get("do_shuffle", True),
         )
         ds_split_merged[split] = ds
 
