@@ -18,18 +18,26 @@ from transnormer.data import loader, process
 def tokenize_input_and_output(
     batch: Dict,
     tokenizer: transformers.PreTrainedTokenizerBase,
+    reverse_labels: bool = False,
 ) -> Dict:
     """
     Tokenizes a `batch` of input and label strings. Assumes that input string
     (label string) is stored in batch under the key `"orig"` (`"norm"`).
+
+    If reverse_labels=True, `"orig"` and `"norm"` are switched. Use this for training
+    a model that produces reversed predictions, e.g. modern->historical
 
     Function is inspired by `process_data_to_model_inputs` described here:
     https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
     """
 
     # Tokenize the inputs and labels
-    inputs = tokenizer(batch["orig"])
-    outputs = tokenizer(batch["norm"])
+    inputs = (
+        tokenizer(batch["orig"]) if not reverse_labels else tokenizer(batch["norm"])
+    )
+    outputs = (
+        tokenizer(batch["norm"]) if not reverse_labels else tokenizer(batch["orig"])
+    )
 
     batch["input_ids"] = inputs.input_ids
     batch["attention_mask"] = inputs.attention_mask
@@ -79,7 +87,10 @@ def tokenize_dataset_dict(
     # Tokenize by applying map function to the DatasetDict
     prepared_dataset_dict = dataset_dict.map(
         tokenize_input_and_output,
-        fn_kwargs={"tokenizer": tokenizer},
+        fn_kwargs={
+            "tokenizer": tokenizer,
+            "reverse_labels": configs["data"].get("reverse_labels", False),
+        },
         batched=True,
         batch_size=configs["training_hyperparams"]["batch_size"],
         load_from_cache_file=False,

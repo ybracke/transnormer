@@ -6,38 +6,35 @@ gpu = "cuda:0"  # do `export CUDA_VISIBLE_DEVICES=1` when starting environment
 # Random seed (fix for reproducibility)
 random_seed = 42
 
-# Output directory
-# outdir = "./models/model"
-
 # Data
 [data]
 paths_train = [
-    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-train.jsonl",
+    "/home/bracke/code/transnormer/data/interim/synthetic/deu_news_2019/deu_news-norm2hist-300.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
 ]
 
 paths_validation = [
-    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
 ]
 
 paths_test = [
-    "/home/bracke/data/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
 ]
 n_examples_train = [
-    130_000,  # all
+    300_000,  # all
     # 10_000,
     # 1_000_000_000,
 ]
 n_examples_validation = [
-    50_000,  # all
+    1,
     # 1_000_000_000,
     # 1_000_000_000,
 ]
@@ -47,6 +44,8 @@ n_examples_test = [
     # 1_000_000_000,
     # 1_000_000_000,
 ]
+reverse_labels = true
+do_shuffle = false
 
 [tokenizer]
 tokenizer = "google/byt5-small"
@@ -62,8 +61,7 @@ checkpoint_encoder_decoder = "google/byt5-small"
 
 [training_hyperparams]
 batch_size = 8
-# gradient_accumulation_steps = 4
-epochs = 5
+epochs = 7
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
