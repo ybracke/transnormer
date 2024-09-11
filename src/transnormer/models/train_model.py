@@ -215,6 +215,7 @@ def train_seq2seq_model(
         evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
         logging_steps=configs["training_hyperparams"]["logging_steps"],
         eval_steps=configs["training_hyperparams"]["eval_steps"],
+        load_best_model_at_end=True,
     )
 
     collator = transformers.DataCollatorForSeq2Seq(
