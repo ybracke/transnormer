@@ -213,8 +213,6 @@ def train_seq2seq_model(
         save_strategy=configs["training_hyperparams"]["save_strategy"],
         logging_strategy=configs["training_hyperparams"]["logging_strategy"],
         evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
-        logging_steps=configs["training_hyperparams"]["logging_steps"],
-        eval_steps=configs["training_hyperparams"]["eval_steps"],
         load_best_model_at_end=True,
     )
 
@@ -229,7 +227,9 @@ def train_seq2seq_model(
             steps_per_epoch = math.ceil(
                 len(train_dataset) / (args.per_device_train_batch_size * args._n_gpu)
             )
-            if state.global_step % (max(2, steps_per_epoch) // 2) == 0:
+            # Trigger evaluation only at the middle of the epoch
+            # Combine this with {eval,logging}_strategy="epoch"
+            if state.global_step % steps_per_epoch == steps_per_epoch // 2:
                 control.should_log = True
                 control.should_evaluate = True
 

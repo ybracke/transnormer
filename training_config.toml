@@ -1,51 +1,50 @@
 # -*- coding = utf-8 -*-
 
 # Select GPU
-gpu = "cuda:0"  # do `export CUDA_VISIBLE_DEVICES=1` when starting environment
+gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 
 # Random seed (fix for reproducibility)
 random_seed = 42
 
+
 # Data
 [data]
 paths_train = [
-    "/home/bracke/code/transnormer/data/interim/synthetic/deu_news_2019/deu_news-norm2hist-300.jsonl",
+    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-train.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
-]
+    ]
 
 paths_validation = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
+    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
-]
+    ]
 
 paths_test = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl",
+    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-test.jsonl" ,
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
-]
+    ]
 n_examples_train = [
-    300_000,  # all
+    1_000_000_000,
     # 10_000,
     # 1_000_000_000,
-]
+    ]
 n_examples_validation = [
-    1,
+    1_000_000_000,
     # 1_000_000_000,
     # 1_000_000_000,
-]
+    ]
 # not used
 n_examples_test = [
     1,
     # 1_000_000_000,
     # 1_000_000_000,
-]
-reverse_labels = true
-do_shuffle = false
+    ]
 
 [tokenizer]
 tokenizer = "google/byt5-small"
@@ -59,24 +58,25 @@ max_length_input = 512
 [language_models]
 checkpoint_encoder_decoder = "google/byt5-small"
 
+
 [training_hyperparams]
-batch_size = 8
-epochs = 7
+batch_size = 4
+epochs = 8
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
-eval_strategy = "steps"
-logging_strategy = "steps"
-# dummy values for eval_steps and logging_steps will be ignored
-# instead evaluates/logs twice per epoch (via CustomCallback)
-eval_steps = 100_000_000
-logging_steps = 100_000_000
-# outdir_path = "./models/model"
+eval_strategy = "epoch"
+logging_strategy = "epoch"
+# output_dir = "./models/models_2024-09-12"
 
 
-# Parameters for beam search decoding
+
+# Params for beam search decoding
+# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/16transformers/v4.10.1/main_classes/model.html
+# These initial parameters were copied from
+# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
 [beam_search_decoding]
 no_repeat_ngram_size = 0
-early_stopping = false
+early_stopping = true
 length_penalty = 2.0
 num_beams = 4
