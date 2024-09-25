@@ -20,6 +20,5 @@ conda activate gpu-venv-transnormer
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 export CUDA_VISIBLE_DEVICES=1
 
-# Create generations based on ./test_config.toml
 python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT1 --base-layer orig
 # python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT2 --base-layer norm
