@@ -155,6 +155,7 @@ def n_correct_and_total_selected_source_types(
     alignments_orig2pred: List[List[Tuple[str, str, float]]],
     selected_types: Optional[Set[str]] = None,
     deselected_types: Optional[Set[str]] = None,
+    print_number_of_skipped: bool = False,
 ) -> Tuple[int, int]:
     n_skipped = 0
     if deselected_types is None:
@@ -184,5 +185,6 @@ def n_correct_and_total_selected_source_types(
                 total_sent += 1
         correct_corpus += correct_sent
         total_corpus += total_sent
-    print(f"Skipped {n_skipped} tokens.")
+    if print_number_of_skipped:
+        print(f"Skipped {n_skipped} tokens.")
     return correct_corpus, total_corpus
