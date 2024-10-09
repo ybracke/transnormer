@@ -45,6 +45,8 @@ n_examples_test = [
     # 1_000_000_000,
     # 1_000_000_000,
     ]
+# reverse_labels = false
+# do_shuffle = true
 
 [tokenizer]
 tokenizer = "google/byt5-small"
@@ -68,15 +70,3 @@ save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
 # output_dir = "./models/models_2024-09-12"
-
-
-
-# Params for beam search decoding
-# see https://huggingface.co/blog/how-to-generate and https://huggingface.co/16transformers/v4.10.1/main_classes/model.html
-# These initial parameters were copied from
-# https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
-[beam_search_decoding]
-no_repeat_ngram_size = 0
-early_stopping = true
-length_penalty = 2.0
-num_beams = 4
