@@ -104,6 +104,12 @@ def parse_and_check_arguments(
         "--test-config",
         help="Path to the file containing the test configurations",
     )
+    parser.add_argument(
+        "-i",
+        "--ignore-case",
+        action="store_true",
+        help="Ignore case when computing the accuracy (default: False)",
+    )
 
     args = parser.parse_args(arguments)
 
@@ -131,11 +137,10 @@ def main(arguments: Optional[List[str]] = None) -> None:
         ref = read_plain_text_file(args.ref_file)
         pred = read_plain_text_file(args.pred_file)
 
-    # # Optional: Apply transformation to ref and pred
-    # # TODO: this should be a command-line option (pass transformation code snippet?)
-    # transformation = lambda s: s.lower()
-    # ref = [transformation(s) for s in ref]
-    # pred = [transformation(s) for s in pred]
+    # Optional: Apply transformation to ref and pred
+    if args.ignore_case:
+        ref = [s.lower() for s in ref]
+        pred = [s.lower() for s in pred]
 
     align_types = args.align_types.split(",")
 
@@ -156,6 +161,8 @@ def main(arguments: Optional[List[str]] = None) -> None:
     output = {"pred-file": args.pred_file, "ref-file": args.ref_file}
     if args.test_config:
         output["test-config"] = args.test_config
+    if args.ignore_case:
+        output["ignore-case"] = True
     output.update(metrics)
 
     print(json.dumps(output))
