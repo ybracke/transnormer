@@ -278,20 +278,12 @@ def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
             "save_steps": 10,
             "fp16": False,
         },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
-        },
     }
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
     tokenizer = train_model.load_tokenizer(CONFIGS)
     model = train_model.warmstart_seq2seq_model(CONFIGS, tokenizer, device)
     # Check class
     assert isinstance(model, transformers.T5ForConditionalGeneration)
-    # Check some configs
-    assert model.config.num_beams == 4
 
 
 def test_data_collation() -> None:
@@ -333,12 +325,6 @@ def test_data_collation() -> None:
             "eval_strategy": "steps",
             "save_steps": 1,
             "fp16": False,  # set to False for byT5-based models
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
         },
     }
 
@@ -444,15 +430,9 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
             "logging_steps": 1000,
             "eval_steps": 1000,
             "save_strategy": "epoch",
-            "eval_strategy": "steps",
-            "logging_strategy": "steps",
+            "eval_strategy": "epoch",
+            "logging_strategy": "epoch",
             "fp16": False,  # set to False for byT5-based models
-        },
-        "beam_search_decoding": {
-            "no_repeat_ngram_size": 3,
-            "early_stopping": True,
-            "length_penalty": 2.0,
-            "num_beams": 4,
         },
     }
     device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")

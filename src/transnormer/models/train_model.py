@@ -176,14 +176,6 @@ def warmstart_seq2seq_model(
     model.config.eos_token_id = tokenizer.eos_token_id
     model.config.pad_token_id = tokenizer.pad_token_id
 
-    # Params for beam search decoding
-    model.config.no_repeat_ngram_size = configs["beam_search_decoding"][
-        "no_repeat_ngram_size"
-    ]
-    model.config.early_stopping = configs["beam_search_decoding"]["early_stopping"]
-    model.config.length_penalty = configs["beam_search_decoding"]["length_penalty"]
-    model.config.num_beams = configs["beam_search_decoding"]["num_beams"]
-
     return model
 
 
