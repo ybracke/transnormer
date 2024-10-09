@@ -279,7 +279,10 @@ def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
             "fp16": False,
         },
     }
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
     tokenizer = train_model.load_tokenizer(CONFIGS)
     model = train_model.warmstart_seq2seq_model(CONFIGS, tokenizer, device)
     # Check class
@@ -330,7 +333,10 @@ def test_data_collation() -> None:
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
 
     dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
     tokenizer = train_model.load_tokenizer(CONFIGS)
@@ -435,7 +441,10 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
             "fp16": False,  # set to False for byT5-based models
         },
     }
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
     dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
     tokenizer = train_model.load_tokenizer(CONFIGS)
     prepared_dataset_dict = train_model.tokenize_dataset_dict(

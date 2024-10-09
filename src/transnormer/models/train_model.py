@@ -291,7 +291,10 @@ def main():
     torch.manual_seed(CONFIGS["random_seed"])
 
     # GPU set-up
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
     # limit memory usage to 90%
     if torch.cuda.is_available():
         torch.cuda.set_per_process_memory_fraction(0.9, device)

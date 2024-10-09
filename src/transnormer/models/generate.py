@@ -50,7 +50,10 @@ def main(arguments: Optional[List[str]] = None) -> None:
     torch.manual_seed(CONFIGS["random_seed"])
 
     # (2.2) GPU set-up
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
 
     # (3) Data
     path = CONFIGS["data"]["path_test"]
