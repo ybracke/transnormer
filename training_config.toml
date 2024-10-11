@@ -59,7 +59,7 @@ max_length_input = 512
 # Base model(s)
 [language_models]
 checkpoint_encoder_decoder = "google/byt5-small"
-
+# from_scratch = True
 
 [training_hyperparams]
 batch_size = 4
