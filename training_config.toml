@@ -10,32 +10,32 @@ random_seed = 42
 # Data
 [data]
 paths_train = [
-    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-train.jsonl",
+    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-train.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
     ]
 
 paths_validation = [
-    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-validation.jsonl",
+    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
     ]
 
 paths_test = [
-    "/home/bracke/code/transnormer/data/interim/dtaeval-v4.2/dtaeval-v4.2-test.jsonl" ,
+    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-test.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
     ]
 n_examples_train = [
-    1_000_000_000,
+    1_000_000_000, # all
     # 10_000,
     # 1_000_000_000,
     ]
 n_examples_validation = [
-    1_000_000_000,
+    1_000_000_000, # all
     # 1_000_000_000,
     # 1_000_000_000,
     ]
@@ -59,14 +59,22 @@ max_length_input = 512
 # Base model(s)
 [language_models]
 checkpoint_encoder_decoder = "google/byt5-small"
-# from_scratch = True
+from_scratch = true
 
 [training_hyperparams]
-batch_size = 4
-epochs = 8
+batch_size = 8
+epochs = 10
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
-# output_dir = "./models/models_2024-09-12"
+
+
+# # Parameters for beam search decoding
+# [beam_search_decoding]
+# no_repeat_ngram_size = 0
+# early_stopping = false
+# length_penalty = 2.0
+# num_beams = 4
+# max_length = 1024

@@ -168,13 +168,12 @@ def warmstart_seq2seq_model(
     """
 
     model_name = configs["language_models"]["checkpoint_encoder_decoder"]
+    model = transformers.T5ForConditionalGeneration.from_pretrained(model_name).to(
+        device
+    )
+    # Use only model architecture but not pre-trained weights
     if configs["language_models"].get("from_scratch"):
-        # Uses only model architecture but not pre-trained weights
-        model = transformers.T5ForConditionalGeneration(model_name).to(device)
-    else:
-        model = transformers.T5ForConditionalGeneration.from_pretrained(
-            model_name
-        ).to(device)
+        model = transformers.T5ForConditionalGeneration(model.config).to(device)
 
     # Setting the special tokens
     model.config.decoder_start_token_id = tokenizer.pad_token_id
