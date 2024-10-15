@@ -2,6 +2,7 @@
 
 # Select GPU
 gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
+per_process_memory_fraction = 0.9
 
 # Random seed (fix for reproducibility)
 random_seed = 42
@@ -62,7 +63,7 @@ checkpoint_encoder_decoder = "google/byt5-small"
 
 [training_hyperparams]
 batch_size = 4
-epochs = 5
+epochs = 1
 learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
