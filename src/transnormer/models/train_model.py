@@ -201,15 +201,16 @@ def train_seq2seq_model(
     training_args = transformers.Seq2SeqTrainingArguments(
         output_dir=output_dir,
         predict_with_generate=True,
+        group_by_length=True,
+        load_best_model_at_end=True,
         num_train_epochs=configs["training_hyperparams"]["epochs"],
         per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
         fp16=configs["training_hyperparams"]["fp16"],
-        group_by_length=True,
         save_strategy=configs["training_hyperparams"]["save_strategy"],
         logging_strategy=configs["training_hyperparams"]["logging_strategy"],
         evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
-        load_best_model_at_end=True,
+        save_total_limit=configs["training_hyperparams"]["save_total_limit"],
     )
 
     collator = transformers.DataCollatorForSeq2Seq(
@@ -299,9 +300,10 @@ def main():
     device = torch.device(
         gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
     )
-    # limit memory usage to 90%
-    if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(0.9, device)
+    # Limit memory usage
+    memory_fraction = CONFIGS.get("per_process_memory_fraction")
+    if memory_fraction and torch.cuda.is_available():
+        torch.cuda.set_per_process_memory_fraction(memory_fraction, device)
 
     # (2) Load data
 

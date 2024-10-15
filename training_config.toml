@@ -2,6 +2,7 @@
 
 # Select GPU
 gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
+per_process_memory_fraction = 0.9
 
 # Random seed (fix for reproducibility)
 random_seed = 42
@@ -69,12 +70,5 @@ fp16 = false
 save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
-
-
-# # Parameters for beam search decoding
-# [beam_search_decoding]
-# no_repeat_ngram_size = 0
-# early_stopping = false
-# length_penalty = 2.0
-# num_beams = 4
-# max_length = 1024
+save_total_limit = 3
+# output_dir = "./models/models_2024-09-12"
