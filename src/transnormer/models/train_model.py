@@ -296,9 +296,10 @@ def main():
     device = torch.device(
         gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
     )
-    # limit memory usage to 90%
-    if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(0.9, device)
+    # Limit memory usage
+    memory_fraction = CONFIGS.get("per_process_memory_fraction")
+    if memory_fraction and torch.cuda.is_available():
+        torch.cuda.set_per_process_memory_fraction(memory_fraction, device)
 
     # (2) Load data
 
