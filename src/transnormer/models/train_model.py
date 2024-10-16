@@ -204,6 +204,7 @@ def train_seq2seq_model(
         group_by_length=True,
         load_best_model_at_end=True,
         optim="adamw_torch",
+        learning_rate=configs["training_hyperparams"]["learning_rate"],
         num_train_epochs=configs["training_hyperparams"]["epochs"],
         per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
         per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
