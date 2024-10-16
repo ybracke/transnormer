@@ -7,22 +7,22 @@ gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 random_seed = 42
 
 [data]
-path_test = "data/interim/0_TEST/2_TEST.jsonl"
+path_test = "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl"
 # n_examples_test = 24
 
 [tokenizer]
 checkpoint_in = "google/byt5-small"
 
 [tokenizer_configs]
-padding="longest" # pad to the longest sequence in batch
-truncation=false
-# max_length = None
+padding = "longest" # pad to the longest sequence in batch
+truncation = false
+max_length = 1024
 
 [model]
-checkpoint =  "models/models_2023-10-04/checkpoint-24000"
+checkpoint = "/home/bracke/code/transnormer/models/models_2024-10-15"
 
 [generation]
-batch_size = 8
+batch_size = 32
 
 [generation_config]
 # See here for more options: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
