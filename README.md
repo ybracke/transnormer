@@ -4,6 +4,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
 
 
 - [`transnormer`](#transnormer)
+  - [Models](#models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
     - [2.a Install package from GitHub](#2a-install-package-from-github)
@@ -24,9 +25,23 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [3. Evaluation](#3-evaluation)
       - [3.1 Metrics](#31-metrics)
       - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
-  - [Results](#results)
   - [Project](#project)
   - [License](#license)
+
+
+
+## Models
+
+**Note:** This section is continously updated.
+
+We release *transnormer* models and evaluation results on the Hugging Face Hub.
+
+
+| Model | Test set | Time period | WordAcc | WordAcc (-i) |
+| --- | --- | --- | --- | --- |
+| [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
+
+The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalizaiton are ignored).
 
 
 ## Installation
@@ -345,23 +360,6 @@ jq -r '.norm' ./8ae3fd47.jsonl > norm
 jq -r '.pred' ./8ae3fd47.jsonl > pred
 code --diff norm pred
 ```
-
-## Results
-
-[TODO]
-
-**Note:** This section will be continously updated.
-
-Scores on a test set extracted from the [DTA EvalCorpus](https://kaskade.dwds.de/~moocow/software/dtaec/) (13 documents, ~18,000 sentences; ~400,000 tokens):
-
-| Method | WordAcc | WordAcc (`-i`) |
-| --- | --- | --- |
-| identity | 79.59 | 79.80 |
-| translit | 93.91 | 94.17 |
-| transnormer | 98.93 | 99.18 |
-
-The metric used is the harmonized word accurracy explained [above](#31-metrics); `-i` denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalizaiton are ignored).
-For the baseline method `identity` the historical text is simply treated as the normalization and compared to the gold normalization. The method `translit` is a version of `identity`, where extinct German graphemes are replaced by their modern counterparts (e.g. replaces every `ſ` with `s`). The `transnormer` model used here is a `byt5-small` model, with downstream training on a different section of the DTA EvalCorpus (~204K sentences).
 
 
 ## Project
