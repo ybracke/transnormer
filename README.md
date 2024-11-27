@@ -25,11 +25,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
       - [3.1 Metrics](#31-metrics)
       - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
   - [Results](#results)
-  - [Background](#background)
-    - [Text+](#text)
-    - [Description](#description)
-    - [CAB](#cab)
-      - [`transnormer` vs. `CAB`](#transnormer-vs-cab)
+  - [Project](#project)
   - [License](#license)
 
 
@@ -147,6 +143,8 @@ See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 #### Training config file
 
+[TODO]
+
 The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
 
 Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
@@ -194,6 +192,8 @@ This section may change in the future, see this [issue](https://github.com/ybrac
 
 #### Resume training a model
 
+[TODO]
+
 We may want to fine-tune a model that is already the product of fine-tuning. We call the first fine-tuned model 'checkpoint-X' and the second model 'checkpoint-Y'. To train checkpoint-Y from checkpoint-X simply add the path to checkpoint-X under `language_models` in `training_config.toml`.
 
 To clarify, checkpoint-Y was created like this:
@@ -235,6 +235,8 @@ python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
 The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
 
 #### Unique names for config and prediction files
+
+[TODO]
 
 Rename and copy current `test_config.toml`:
 
@@ -333,6 +335,8 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 
 #### 3.2 Inspecting and analyzing outputs
 
+[TODO]
+
 **TODO**, see [this issue](https://github.com/ybracke/transnormer/issues/93)
 
 Use `jq` to create a text-only version from the JSONL files containing the predictions and then call `diff` on that. Example:
@@ -343,6 +347,8 @@ code --diff norm pred
 ```
 
 ## Results
+
+[TODO]
 
 **Note:** This section will be continously updated.
 
@@ -358,60 +364,9 @@ The metric used is the harmonized word accurracy explained [above](#31-metrics);
 For the baseline method `identity` the historical text is simply treated as the normalization and compared to the gold normalization. The method `translit` is a version of `identity`, where extinct German graphemes are replaced by their modern counterparts (e.g. replaces every `ſ` with `s`). The `transnormer` model used here is a `byt5-small` model, with downstream training on a different section of the DTA EvalCorpus (~204K sentences).
 
 
-## Background
-
-In this section you find information on the institutional and theoretical background of the project.
-
-### Text+
+## Project
 
 This project is developed at the [Berlin-Brandenburg Academy of Sciences and Humanities](https://www.bbaw.de) (Berlin-Brandenburgische Akademie der Wissenschaften, BBAW) within the national research data infrastructure (Nationale Forschungsdateninfrastruktur, NFDI) [Text+](https://www.text-plus.org/).
-
-### Description
-
-We use a transformer encoder-decoder model. The encoder-decoder
-gets warm-started with pre-trained models and fine-tuned on a dataset for
-lexical normalization.
-
-1. Pre-trained encoder for historic German
-2. Pre-trained decoder for modern German
-3. Plug encoder and decoder together by supervised learning with labeled data
-
-Intuition: We create a model from an encoder that knows a lot about historical
-  language, and a decoder that knows a lot about modern language and plug them
-  together by training them on gold-normalized data. Both encoder and decoder can be pre-trained on large quantities of unlabeled data (historic/modern), which are more readily available than labeled data.
-
-### CAB
-
-This normalizer developed in this project is intended to become the successor of the normalizing component of the Cascaded Analysis Broker (CAB), developed at the BBAW by Bryan Jurish ([CAB webpage](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [CAB web service](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [Jurish (2012)](https://publishup.uni-potsdam.de/opus4-ubp/frontdoor/index/index/docId/5562)).
-
-CAB utilizes hand-craftet rules, edit distances, lexicon checks hidden markov language models, and an exception lexicon.
-
-#### `transnormer` vs. `CAB`
-
-Overview of main changes `transnormer` makes as compared to `CAB`.
-
-##### Machine learning  <!-- omit in toc -->
-
-* Being based on the transformer architecture, this project uses state-of-the-art machine learning technology.
-* Training machine learning models can be continued once more and/or better training data is available, thus allowing a continuous improvement of the models.
-* Machine learning should help to find better normalizations for unknown texts and contexts.
-* By using pre-trained transformer models we can leverage linguistic knowledge from large quantities of data
-
-##### Sequence-to-sequence  <!-- omit in toc -->
-
-The `transnormer` models are sequence-to-sequence models. This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where the original text is first tokenized and then, secondly, each token is assigned a single label.
-
-As a consequence, `transnormer` can normalize word separation, e.g. normalize `gehts` to `geht es` and `aller Hand` to `allerhand`, while CAB cannot. CAB can only assign one label per token, i.e. would (at best) normalize `gehts` to the pseudo-token `geht_es` and normalize each token in `aller Hand` separately, thereby producing the suboptimal normalization `aller Hand`. In short, whitespace in output is no longer contingent on the tokenization of the input.
-
-##### Leverage large language models  <!-- omit in toc -->
-
-* Pretrained LLMs have general capabilities concerning language understanding derived from being trained on large quantities of textual data in one or more languages.
-* This knowledge should help the fine-tuned model to generalize better and deal better with context than CAB does.
-
-##### Maintainability  <!-- omit in toc -->
-
-* We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. [Huggingface](https://huggingface.co/)), instead of in-house developments that are less well supported.
-* We move away from a C- and Perl-based program to a Python-based program, which has a larger community of users and developers.
 
 
 ## License
