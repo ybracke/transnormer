@@ -21,10 +21,9 @@ A lexical normalizer for historical spelling variants using a transformer archit
       - [Resume training a model](#resume-training-a-model)
     - [2. Generating normalizations](#2-generating-normalizations)
       - [Test config file](#test-config-file)
-      - [Unique names for config and prediction files](#unique-names-for-config-and-prediction-files)
     - [3. Evaluation](#3-evaluation)
-      - [3.1 Metrics](#31-metrics)
-      - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
+      - [3.1 Get evaluation metrics](#31-get-evaluation-metrics)
+      - [3.2 `pred_eval.sh`](#32-pred_evalsh)
   - [Project](#project)
   - [License](#license)
 
@@ -158,8 +157,6 @@ See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 #### Training config file
 
-[TODO]
-
 The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
 
 Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
@@ -207,8 +204,6 @@ This section may change in the future, see this [issue](https://github.com/ybrac
 
 #### Resume training a model
 
-[TODO]
-
 We may want to fine-tune a model that is already the product of fine-tuning. We call the first fine-tuned model 'checkpoint-X' and the second model 'checkpoint-Y'. To train checkpoint-Y from checkpoint-X simply add the path to checkpoint-X under `language_models` in `training_config.toml`.
 
 To clarify, checkpoint-Y was created like this:
@@ -219,13 +214,7 @@ Thus, in order to keep track of the full provenance of checkpoint-Y, we must not
 
 ### 2. Generating normalizations
 
-The fastest way to create normalizations and get evaluation metrics is to run the bash script:
-`bash pred_eval.sh`
-This runs the scripts for generation and evaluation and performs the copy/rename operations described in the following.
-
----
-
-The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file). This produces at JSONL file with generated normalizations.
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file) and saves a JSONL file with the same properties as the input file, plus a `pred` property for the predicted normalization. 
 
 ```
 usage: generate.py [-h] [-c CONFIG] [-o OUT]
@@ -239,44 +228,17 @@ optional arguments:
   -o OUT, --out OUT     Path to the output file (JSONL)
 ```
 
-Example call:
-
-```
-python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
-```
-
 #### Test config file
 
 The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
 
-#### Unique names for config and prediction files
-
-[TODO]
-
-Rename and copy current `test_config.toml`:
-
-```bash
-# in the transformer directory call
-filename=`md5sum test_config.toml | head -c 8`.toml
-cp test_config.toml hidden/test_configs/$filename
-```
-
-Rename the predictions file (e.g. `hidden/predictions/preds.jsonl`) to a unique name like this:
-
-```bash
-# go to predictions directory
-cd hidden/predictions
-# rename pred file
-filename=`md5sum preds.jsonl | head -c 8`.jsonl
-mv preds.jsonl $filename
-```
-
-
 ### 3. Evaluation
 
-#### 3.1 Metrics
+The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see [below](#32-pred-evalsh)).  
 
-The script `src/transnormer/evaluation/evaluate.py` computes a harmonized accuracy score and the normalized Levenshtein distance. The metric and its computation are adopted from [Bawden et al. (2022)](https://github.com/rbawden/ModFr-Norm).
+#### 3.1 Get evaluation metrics
+
+The script `src/transnormer/evaluation/evaluate.py` computes a harmonized accuracy score and the normalized Levenshtein distance. The metrics and their computation are adopted from [Bawden et al. (2022)](https://github.com/rbawden/ModFr-Norm).
 
 ```
 usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
@@ -311,17 +273,18 @@ Example call:
 
 ```bash
 python3 src/transnormer/evaluation/evaluate.py \
-  --input-type jsonl --ref-file hidden/predictions/d037b975.jsonl \
-  --pred-file hidden/predictions/d037b975.jsonl \
+  --input-type jsonl --ref-file d037b975.jsonl \
+  --pred-file d037b975.jsonl \
   --ref-field=norm --pred-field=pred -a both \
-  --sent-wise-file hidden/sent_scores/sent_scores_d037b975.pkl \
-  --test-config hidden/test_configs/d1b1ea77.toml \
-  >> hidden/eval.jsonl
+  --sent-wise-file sent_scores_d037b975.pkl \
+  --test-config d1b1ea77.toml 
 ```
 
-In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. If `ref` and `pred` texts are stored in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.). Global evaluation metrics are printed to stdout by default and can be redirected, as in the example above.
+In this case, the gold normalizations (*ref*) and auto-generated normalizations (*pred*) are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. 
+If *ref* and *pred* texts are stored in different files, the examples in the files must be in the same order. 
+Global evaluation metrics are printed to stdout by default and can be redirected into a file.
 
-If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
+If you have a single JSONL file with original input, predictions and gold labels and you want to write the sentence-wise accuracy scores (that have been computed by `evaluate.py`) to this file, you can do this with `src/transnormer/evaluation/add_sent_scores.py`:
 
 ```
 usage: add_sent_scores.py [-h] [-p PROPERTY] scores data
@@ -348,18 +311,10 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
 ```
 
-#### 3.2 Inspecting and analyzing outputs
 
-[TODO]
+#### 3.2 `pred_eval.sh`
 
-**TODO**, see [this issue](https://github.com/ybracke/transnormer/issues/93)
-
-Use `jq` to create a text-only version from the JSONL files containing the predictions and then call `diff` on that. Example:
-```bash
-jq -r '.norm' ./8ae3fd47.jsonl > norm
-jq -r '.pred' ./8ae3fd47.jsonl > pred
-code --diff norm pred
-```
+This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
 
 
 ## Project
