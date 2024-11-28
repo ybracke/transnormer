@@ -18,7 +18,6 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [Preparation 2: Data preparation](#preparation-2-data-preparation)
     - [1. Model training](#1-model-training)
       - [Training config file](#training-config-file)
-      - [Resume training a model](#resume-training-a-model)
     - [2. Generating normalizations](#2-generating-normalizations)
       - [Test config file](#test-config-file)
     - [3. Evaluation](#3-evaluation)
@@ -40,7 +39,7 @@ We release *transnormer* models and evaluation results on the Hugging Face Hub.
 | --- | --- | --- | --- | --- |
 | [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
 
-The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalizaiton are ignored).
+The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored).
 
 
 ## Installation
@@ -63,7 +62,7 @@ pip install torch==1.12.1+cu113 torchvision torchaudio -f https://download.pytor
 
 #### 1.b On a CPU <!-- omit in toc -->
 
-Set up a virtual environment, e.g. like this
+Set up a virtual environment, e.g.:
 
 ```bash
 python3 -m venv .venv
@@ -74,7 +73,7 @@ pip install --upgrade pip
 ### 2.a Install package from GitHub
 
 ```bash
-pip install git+https://github.com/ybracke/transnormer.git
+pip install git+https://github.com/ybracke/transnormer.git@dev
 ```
 
 ### 2.b Editable install for developers
@@ -82,6 +81,7 @@ pip install git+https://github.com/ybracke/transnormer.git
 ```bash
 # Clone repo from GitHub
 git clone git@github.com:ybracke/transnormer.git
+git switch dev
 cd ./transnormer
 # install package in editable mode
 pip install -e .
@@ -93,8 +93,7 @@ pip install -r requirements-dev.txt
 
 To train a model you need the following resources:
 
-* Encoder and decoder models (available on the [Huggingface Model Hub](huggingface.co/models))
-* Tokenizers that belong to the models (also available via Huggingface)
+* A pre-trained encoder-decoder model (available on the [Huggingface Model Hub](huggingface.co/models))
 * A dataset of historical language documents with (gold-)normalized labels
 * A file specifying the training configurations, see [Training config file](#training-config-file)
 
@@ -116,7 +115,7 @@ For more details, see [below](#1-model-training)
 #### Quickstart Generation and Evaluation
 
 1. Specify the generation parameters in the [test config file](#test-config-file)
-2. If necessary adjust paths in `pred_eval.sh`. Then run: `bash pred_eval.sh`
+2. Specify file paths in `pred_eval.sh`, then run: `bash pred_eval.sh`
 
 For more details, see sections on [Generation](#2-generating-normalizations) and [Evaluation](#3-evaluation).
 
@@ -136,7 +135,7 @@ conda activate <environment-name>
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 ```
 
-* If you have multiple GPUs available and want to use only one (here: the GPU with index `1`):
+* If you have multiple GPUs available and want to use only one (e.g. the GPU with index `1`):
   * `export CUDA_VISIBLE_DEVICES=1`
   * Set `gpu = "cuda:0"` in [config file](#1-select-gpu)
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
@@ -151,9 +150,7 @@ See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 1. Specify the training parameters in the [config file](#training-config-file)
 
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first; see [Installation](#installation).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
-
-
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
 
 #### Training config file
 
@@ -191,16 +188,6 @@ Under `[language_models]`, specify the model that is to be fine-tuned. Currently
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
 The `[training_hyperparams]` section specifies essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), `fp16` (toggles half-precision training), and `learning_rate`. Refer to [`transformers.Seq2SeqTrainingArguments`](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.Seq2SeqTrainingArguments) for details. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. 
-
-
-#### Resume training a model
-
-We may want to fine-tune a model that is already the product of fine-tuning. We call the first fine-tuned model 'checkpoint-X' and the second model 'checkpoint-Y'. To train checkpoint-Y from checkpoint-X simply add the path to checkpoint-X under `language_models` in `training_config.toml`.
-
-To clarify, checkpoint-Y was created like this:
-```original pretrained model (e.g. byt5-small) -> checkpoint-X -> checkpoint-Y```
-
-Thus, in order to keep track of the full provenance of checkpoint-Y, we must not only keep checkpoint-Y's `training_config.toml` but also keep the directory where checkpoint-X and its `training_config.toml` is located.
 
 
 ### 2. Generating normalizations
