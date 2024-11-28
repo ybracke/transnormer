@@ -157,50 +157,41 @@ See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
 
 #### Training config file
 
-The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
-
-Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
+The file `training_config.toml` specifies the training configurations, e.g. training data, base model, training hyperparameters. Update the file before fine-tuning model.
 
 The following paragraphs provide detailed explanations of each section and parameter within the configuration file to facilitate effective model training.
 
 ##### 1. Select GPU <!-- omit in toc -->
 
-The `gpu` parameter allows you to specify the GPU device for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand using if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
+The `gpu` parameter sets the GPU device used for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand, if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
 
 ##### 2. Random Seed (Reproducibility) <!-- omit in toc -->
 
-The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. This enables consistent results across different runs.
+The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. 
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. Currently only JSONL files are supported, where each record must have the properties `orig` and `norm`. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 
-Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
+Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must contain the same amount of elements as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
+
+Per default the samples get shuffled by the training code, set `do_shuffle = false` to prevent this. Set `reverse_labels = true` to switch the labels (`orig` and `norm`) of the training data in order to train a denormalizer.
 
 ##### 4. Tokenizer Configuration <!-- omit in toc -->
 
-The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can specify `tokenizer_input` and `tokenizer_output` models. If you omit `tokenizer_output`, `tokenizer_input` will be used as the output tokenizer as well. If you omit `tokenizer_input`, the program will try to use the tokenizer of the checkpoint given under `language_model`.
-
+The `[tokenizer]` section holds settings related to tokenization of input and output sequences. Specify the `tokenizer` that belongs to the model, the `padding` behavior (see [huggingface reference](https://huggingface.co/docs/transformers/pad_truncation)).
+If you omit `tokenizer`, the program will attempt to use the tokenizer of the checkpoint given under `language_model`.
 You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
-You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. You can set `max_length_output` to define the maximum token lengths of output sequences, though this is not recommended and the property might be removed.
+You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. 
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
-Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as the base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
-
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
+Under `[language_models]`, specify the model that is to be fine-tuned. Currently, only encoder-decoder models of the type [ByT5](https://huggingface.co/google/byt5-small) are safely supported. Set `from_scratch = true` to do a retraining from scratch instead of fine-tuning.
 
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
-The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs) ~~, and `learning_rate`~~ (not actually used). You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
+The `[training_hyperparams]` section specifies essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), `fp16` (toggles half-precision training), and `learning_rate`. Refer to [`transformers.Seq2SeqTrainingArguments`](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.Seq2SeqTrainingArguments) for details. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. 
 
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/88).
-
-##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
-
-The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
-
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/89).
 
 #### Resume training a model
 
@@ -231,6 +222,10 @@ optional arguments:
 #### Test config file
 
 The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
+
+##### Generation configurations <!-- omit in toc -->
+
+The `[generation_config]` section contains parameters related to generation, e.g. `early_stopping`, `length_penalty` (higher value favors longer sequences), `num_beams` (the number of beams to use in beam search, less is faster), `max_new_tokens` (maximum output length in bytes). Refer to [`transformer.GenerationConfig`](https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig) for more options and documentation.
 
 ### 3. Evaluation
 
