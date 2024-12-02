@@ -11,14 +11,18 @@ random_seed = 42
 # Data
 [data]
 paths_train = [
-    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-train.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1600-1699/dtak-train.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-train.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-train.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
     ]
 
 paths_validation = [
-    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-validation.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1600-1699/dtak-validation.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
+    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-validation.jsonl",
     # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
     # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
@@ -31,12 +35,16 @@ paths_test = [
     # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
     ]
 n_examples_train = [
-    1_000, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
     # 10_000,
     # 1_000_000_000,
     ]
 n_examples_validation = [
-    1_00, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
     # 1_000_000_000,
     # 1_000_000_000,
     ]
@@ -64,7 +72,7 @@ from_scratch = false
 
 [training_hyperparams]
 batch_size = 8
-epochs = 2
+epochs = 12
 learning_rate = 0.0005
 fp16 = false
 save_strategy = "epoch"
