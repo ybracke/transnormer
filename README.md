@@ -1,9 +1,9 @@
-# `transnormer`
+# `Transnormer`
 
-A lexical normalizer for historical spelling variants using a transformer architecture.
+`Transnormer` models are byte-level sequence-to-sequence models for normalizing historical German text. 
+This repository contains code for training and evaluating `Transnormer` models. 
 
-
-- [`transnormer`](#transnormer)
+- [`Transnormer`](#transnormer)
   - [Models](#models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
@@ -11,7 +11,7 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [2.b Editable install for developers](#2b-editable-install-for-developers)
     - [3. Requirements](#3-requirements)
   - [Usage](#usage)
-    - [Quickstart](#quickstart)
+    - [Quickstart Model Usage](#quickstart-model-usage)
       - [Quickstart Training](#quickstart-training)
       - [Quickstart Generation and Evaluation](#quickstart-generation-and-evaluation)
     - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
@@ -100,10 +100,30 @@ To train a model you need the following resources:
 
 ## Usage
 
-### Quickstart
+### Quickstart Model Usage
 
-1. Prepare environment (see [below](#preparation-1-virtual-environment))
-2. Prepare data (see [below](#preparation-2-data-preprocessing))
+```python
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+tokenizer = AutoTokenizer.from_pretrained("ybracke/transnormer-19c-beta-v02")
+model = AutoModelForSeq2SeqLM.from_pretrained("ybracke/transnormer-19c-beta-v02")
+sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
+inputs = tokenizer(sentence, return_tensors="pt",)
+outputs = model.generate(**inputs, num_beams=4, max_length=128)
+print(tokenizer.batch_decode(outputs, skip_special_tokens=True))
+# >>> ['Die Königin saß auf des Palastes mittlerer Tribüne.']
+```
+
+Or use this model with the [pipeline API](https://huggingface.co/transformers/main_classes/pipelines.html) like this:
+
+```python
+from transformers import pipeline
+
+transnormer = pipeline(model='ybracke/transnormer-19c-beta-v02')
+sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
+print(transnormer(sentence, num_beams=4, max_length=128))
+# >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
+```
 
 #### Quickstart Training
 
@@ -143,7 +163,16 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 ### Preparation 2: Data preparation
 
-See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
+The training and test data must be in JSONL format, where each record is a parallel training sample, e.g. a sentence. The records in the file must at least have the following format:
+
+```json
+{
+    "orig" : "Eyn Theylſtueck", // original spelling
+    "norm" : "Ein Teilstück"    // normalized spelling
+}
+```
+
+See repository [transnormer-data](https://github.com/ybracke/transnormer-data) for more information.
 
 
 ### 1. Model training
@@ -168,7 +197,7 @@ The `random_seed` parameter defines a fixed random seed (`42` in the default set
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. Currently only JSONL files are supported, where each record must have the properties `orig` and `norm`. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. See [data preparation](#preparation-2-data-preparation) for data format. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must contain the same amount of elements as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
