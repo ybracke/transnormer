@@ -5,13 +5,14 @@ This repository contains code for training and evaluating `Transnormer` models.
 
 - [`Transnormer`](#transnormer)
   - [Models](#models)
+    - [Using Public Models](#using-public-models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
     - [2.a Install package from GitHub](#2a-install-package-from-github)
     - [2.b Editable install for developers](#2b-editable-install-for-developers)
     - [3. Requirements](#3-requirements)
   - [Usage](#usage)
-    - [Quickstart Model Usage](#quickstart-model-usage)
+    - [Quickstart](#quickstart)
       - [Quickstart Training](#quickstart-training)
       - [Quickstart Generation and Evaluation](#quickstart-generation-and-evaluation)
     - [Preparation 1: Virtual environment](#preparation-1-virtual-environment)
@@ -40,6 +41,19 @@ We release *transnormer* models and evaluation results on the Hugging Face Hub.
 | [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
 
 The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored).
+
+### Using Public Models
+
+Models are easy to use with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
+
+```python
+from transformers import pipeline
+
+transnormer = pipeline(model='ybracke/transnormer-19c-beta-v02')
+sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
+print(transnormer(sentence, num_beams=4, max_length=128))
+# >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
+```
 
 
 ## Installation
@@ -100,31 +114,10 @@ To train a model you need the following resources:
 
 ## Usage
 
-### Quickstart Model Usage
+### Quickstart
 
-```python
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
-tokenizer = AutoTokenizer.from_pretrained("ybracke/transnormer-19c-beta-v02")
-model = AutoModelForSeq2SeqLM.from_pretrained("ybracke/transnormer-19c-beta-v02")
-sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
-inputs = tokenizer(sentence, return_tensors="pt",)
-outputs = model.generate(**inputs, num_beams=4, max_length=128)
-print(tokenizer.batch_decode(outputs, skip_special_tokens=True))
-# >>> ['Die Königin saß auf des Palastes mittlerer Tribüne.']
-```
-
-Or use this model with the [pipeline API](https://huggingface.co/transformers/main_classes/pipelines.html) like this:
-
-```python
-from transformers import pipeline
-
-transnormer = pipeline(model='ybracke/transnormer-19c-beta-v02')
-sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
-print(transnormer(sentence, num_beams=4, max_length=128))
-# >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
-```
-
+1. Prepare environment (see [below](#preparation-1-virtual-environment))
+2. Prepare data (see [below](#preparation-2-data-preprocessing))
 #### Quickstart Training
 
 1. Specify the training parameters in the [training config file](#training-config-file)
