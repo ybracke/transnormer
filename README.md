@@ -1,9 +1,11 @@
-# `transnormer`
+# `Transnormer`
 
-A lexical normalizer for historical spelling variants using a transformer architecture.
+`Transnormer` models are byte-level sequence-to-sequence models for normalizing historical German text. 
+This repository contains code for training and evaluating `Transnormer` models. 
 
-
-- [`transnormer`](#transnormer)
+- [`Transnormer`](#transnormer)
+  - [Models](#models)
+    - [Using Public Models](#using-public-models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
     - [2.a Install package from GitHub](#2a-install-package-from-github)
@@ -17,23 +19,46 @@ A lexical normalizer for historical spelling variants using a transformer archit
     - [Preparation 2: Data preparation](#preparation-2-data-preparation)
     - [1. Model training](#1-model-training)
       - [Training config file](#training-config-file)
-      - [Resume training a model](#resume-training-a-model)
     - [2. Generating normalizations](#2-generating-normalizations)
       - [Test config file](#test-config-file)
-      - [Unique names for config and prediction files](#unique-names-for-config-and-prediction-files)
     - [3. Evaluation](#3-evaluation)
-      - [3.1 Metrics](#31-metrics)
-      - [3.2 Inspecting and analyzing outputs](#32-inspecting-and-analyzing-outputs)
-  - [Results](#results)
-  - [Background](#background)
-    - [Text+](#text)
-    - [Description](#description)
-    - [CAB](#cab)
-      - [`transnormer` vs. `CAB`](#transnormer-vs-cab)
+      - [3.1 Get evaluation metrics](#31-get-evaluation-metrics)
+      - [3.2 `pred_eval.sh`](#32-pred_evalsh)
+  - [Project](#project)
   - [License](#license)
 
 
+
+## Models
+
+**Note:** This section is continously updated.
+
+We release *transnormer* models and evaluation results on the Hugging Face Hub.
+
+
+| Model | Test set | Time period | WordAcc | WordAcc (-i) |
+| --- | --- | --- | --- | --- |
+| [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
+
+The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored).
+
+### Using Public Models
+
+Models are easy to use with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
+
+```python
+from transformers import pipeline
+
+transnormer = pipeline(model='ybracke/transnormer-19c-beta-v02')
+sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
+print(transnormer(sentence, num_beams=4, max_length=128))
+# >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
+```
+
+
 ## Installation
+
+In order to reproduce model training and evaluation, install the dependencies and code as described in this section and refer to the documentation in the section on [Usage](#usage).
 
 ### 1. Set up environment
 
@@ -53,7 +78,7 @@ pip install torch==1.12.1+cu113 torchvision torchaudio -f https://download.pytor
 
 #### 1.b On a CPU <!-- omit in toc -->
 
-Set up a virtual environment, e.g. like this
+Set up a virtual environment, e.g.:
 
 ```bash
 python3 -m venv .venv
@@ -64,7 +89,7 @@ pip install --upgrade pip
 ### 2.a Install package from GitHub
 
 ```bash
-pip install git+https://github.com/ybracke/transnormer.git
+pip install git+https://github.com/ybracke/transnormer.git@dev
 ```
 
 ### 2.b Editable install for developers
@@ -72,6 +97,7 @@ pip install git+https://github.com/ybracke/transnormer.git
 ```bash
 # Clone repo from GitHub
 git clone git@github.com:ybracke/transnormer.git
+git switch dev
 cd ./transnormer
 # install package in editable mode
 pip install -e .
@@ -83,8 +109,7 @@ pip install -r requirements-dev.txt
 
 To train a model you need the following resources:
 
-* Encoder and decoder models (available on the [Huggingface Model Hub](huggingface.co/models))
-* Tokenizers that belong to the models (also available via Huggingface)
+* A pre-trained encoder-decoder model (available on the [Huggingface Model Hub](huggingface.co/models))
 * A dataset of historical language documents with (gold-)normalized labels
 * A file specifying the training configurations, see [Training config file](#training-config-file)
 
@@ -95,7 +120,6 @@ To train a model you need the following resources:
 
 1. Prepare environment (see [below](#preparation-1-virtual-environment))
 2. Prepare data (see [below](#preparation-2-data-preprocessing))
-
 #### Quickstart Training
 
 1. Specify the training parameters in the [training config file](#training-config-file)
@@ -106,7 +130,7 @@ For more details, see [below](#1-model-training)
 #### Quickstart Generation and Evaluation
 
 1. Specify the generation parameters in the [test config file](#test-config-file)
-2. If necessary adjust paths in `pred_eval.sh`. Then run: `bash pred_eval.sh`
+2. Specify file paths in `pred_eval.sh`, then run: `bash pred_eval.sh`
 
 For more details, see sections on [Generation](#2-generating-normalizations) and [Evaluation](#3-evaluation).
 
@@ -126,7 +150,7 @@ conda activate <environment-name>
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 ```
 
-* If you have multiple GPUs available and want to use only one (here: the GPU with index `1`):
+* If you have multiple GPUs available and want to use only one (e.g. the GPU with index `1`):
   * `export CUDA_VISIBLE_DEVICES=1`
   * Set `gpu = "cuda:0"` in [config file](#1-select-gpu)
 * `export TOKENIZERS_PARALLELISM=false` to get rid of parallelism warning messages
@@ -134,83 +158,65 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 ### Preparation 2: Data preparation
 
-See repository [transnormer-data](https://github.com/ybracke/transnormer-data)
+The training and test data must be in JSONL format, where each record is a parallel training sample, e.g. a sentence. The records in the file must at least have the following format:
+
+```jsonc
+{
+    "orig" : "Eyn Theylſtueck", // original spelling
+    "norm" : "Ein Teilstück"    // normalized spelling
+}
+```
+
+See repository [transnormer-data](https://github.com/ybracke/transnormer-data) for more information.
 
 
 ### 1. Model training
 
 1. Specify the training parameters in the [config file](#training-config-file)
 
-2. Run training script: `$ python3 src/transnormer/models/model_train.py`. (Don't forget to start your virtual environment first; see [Installation](#installation).) Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
-
-
+2. Run training script: `$ python3 src/transnormer/models/model_train.py`. Training can take multiple hours, so consider using `nohup`: `$ nohup nice python3 src/transnormer/models/train_model.py &`
 
 #### Training config file
 
-The file `training_config.toml` serves as a comprehensive configuration guide for customizing and fine-tuning the training process of a language model using the specified parameters.
-
-Please note that the provided configuration settings and parameters are examples. You can customize them to fit your specific training requirements. Refer to the comments within the configuration file for additional information and guidance on modifying these parameters for optimal training outcomes.
+The file `training_config.toml` specifies the training configurations, e.g. training data, base model, training hyperparameters. Update the file before fine-tuning model.
 
 The following paragraphs provide detailed explanations of each section and parameter within the configuration file to facilitate effective model training.
 
 ##### 1. Select GPU <!-- omit in toc -->
 
-The `gpu` parameter allows you to specify the GPU device for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand using if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
+The `gpu` parameter sets the GPU device used for training. You can set it to the desired GPU identifier, such as `"cuda:0"`, ensuring compatibility with the CUDA environment. Remember to set the appropriate CUDA visible devices beforehand, if required (e.g. `export CUDA_VISIBLE_DEVICES=1` to use only the GPU with index `1`).
 
 ##### 2. Random Seed (Reproducibility) <!-- omit in toc -->
 
-The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. This enables consistent results across different runs.
+The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. 
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section includes paths to training, validation, and test datasets. The `paths_train`, `paths_validation`, and `paths_test` parameters provide paths to respective JSONL files containing data examples. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. See [data preparation](#preparation-2-data-preparation) for data format. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 
-Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must be the same length as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
+Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must contain the same amount of elements as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
+
+Per default the samples get shuffled by the training code, set `do_shuffle = false` to prevent this. Set `reverse_labels = true` to switch the labels (`orig` and `norm`) of the training data in order to train a denormalizer.
 
 ##### 4. Tokenizer Configuration <!-- omit in toc -->
 
-The `[tokenizer]` section holds settings related to tokenization of input and output sequences. You can specify `tokenizer_input` and `tokenizer_output` models. If you omit `tokenizer_output`, `tokenizer_input` will be used as the output tokenizer as well. If you omit `tokenizer_input`, the program will try to use the tokenizer of the checkpoint given under `language_model`.
-
+The `[tokenizer]` section holds settings related to tokenization of input and output sequences. Specify the `tokenizer` that belongs to the model, the `padding` behavior (see [huggingface reference](https://huggingface.co/docs/transformers/pad_truncation)).
+If you omit `tokenizer`, the program will attempt to use the tokenizer of the checkpoint given under `language_model`.
 You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
-You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. You can set `max_length_output` to define the maximum token lengths of output sequences, though this is not recommended and the property might be removed.
+You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. 
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
-Under `[language_models]`, you can choose the language model(s) to be retrained. It is possible to either use a byte-based encoder-decoder as the base model **or** two subword-based models (encoder and decoder). Accordingly the config file must either specify a `checkpoint_encoder_decoder` parameter, which points to the checkpoint of the chosen encoder-decoder model **or** two parameters, `checkpoint_encoder` (for historic language) **and** `checkpoint_decoder` (for modern language).
-
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/67).
+Under `[language_models]`, specify the model that is to be fine-tuned. Currently, only encoder-decoder models of the type [ByT5](https://huggingface.co/google/byt5-small) are safely supported. Set `from_scratch = true` to do a retraining from scratch instead of fine-tuning.
 
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
-The `[training_hyperparams]` section encompasses essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs) ~~, and `learning_rate`~~ (not actually used). You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. `eval_strategy` defines how often evaluation occurs, and `fp16` toggles half-precision training.
-
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/88).
-
-##### 7. Beam Search Decoding Parameters <!-- omit in toc -->
-
-The `[beam_search_decoding]` section contains parameters related to beam search decoding during inference. `no_repeat_ngram_size` prevents n-grams of a certain size from repeating. (Note that what is a sensible value for this parameter is different depending on the tokenization. For a char/byte-based (aka "tokenizer-free") model, set this to higher value than for subword-based models.) `early_stopping` enables stopping decoding when early stopping criteria are met. `length_penalty` controls the trade-off between sequence length and probability. `num_beams` specifies the number of beams to use in beam search.
-
-This section may change in the future, see this [issue](https://github.com/ybracke/transnormer/issues/89).
-
-#### Resume training a model
-
-We may want to fine-tune a model that is already the product of fine-tuning. We call the first fine-tuned model 'checkpoint-X' and the second model 'checkpoint-Y'. To train checkpoint-Y from checkpoint-X simply add the path to checkpoint-X under `language_models` in `training_config.toml`.
-
-To clarify, checkpoint-Y was created like this:
-```original pretrained model (e.g. byt5-small) -> checkpoint-X -> checkpoint-Y```
-
-Thus, in order to keep track of the full provenance of checkpoint-Y, we must not only keep checkpoint-Y's `training_config.toml` but also keep the directory where checkpoint-X and its `training_config.toml` is located.
+The `[training_hyperparams]` section specifies essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), `fp16` (toggles half-precision training), and `learning_rate`. Refer to [`transformers.Seq2SeqTrainingArguments`](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.Seq2SeqTrainingArguments) for details. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. 
 
 
 ### 2. Generating normalizations
 
-The fastest way to create normalizations and get evaluation metrics is to run the bash script:
-`bash pred_eval.sh`
-This runs the scripts for generation and evaluation and performs the copy/rename operations described in the following.
-
----
-
-The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file). This produces at JSONL file with generated normalizations.
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file) and saves a JSONL file with the same properties as the input file, plus a `pred` property for the predicted normalization. 
 
 ```
 usage: generate.py [-h] [-c CONFIG] [-o OUT]
@@ -224,42 +230,21 @@ optional arguments:
   -o OUT, --out OUT     Path to the output file (JSONL)
 ```
 
-Example call:
-
-```
-python3 src/transnormer/models/generate.py -c test_config.toml --out <path>
-```
-
 #### Test config file
 
 The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
 
-#### Unique names for config and prediction files
+##### Generation configurations <!-- omit in toc -->
 
-Rename and copy current `test_config.toml`:
-
-```bash
-# in the transformer directory call
-filename=`md5sum test_config.toml | head -c 8`.toml
-cp test_config.toml hidden/test_configs/$filename
-```
-
-Rename the predictions file (e.g. `hidden/predictions/preds.jsonl`) to a unique name like this:
-
-```bash
-# go to predictions directory
-cd hidden/predictions
-# rename pred file
-filename=`md5sum preds.jsonl | head -c 8`.jsonl
-mv preds.jsonl $filename
-```
-
+The `[generation_config]` section contains parameters related to generation, e.g. `early_stopping`, `length_penalty` (higher value favors longer sequences), `num_beams` (the number of beams to use in beam search, less is faster), `max_new_tokens` (maximum output length in bytes). Refer to [`transformer.GenerationConfig`](https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig) for more options and documentation.
 
 ### 3. Evaluation
 
-#### 3.1 Metrics
+The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see [below](#32-pred-evalsh)).  
 
-The script `src/transnormer/evaluation/evaluate.py` computes a harmonized accuracy score and the normalized Levenshtein distance. The metric and its computation are adopted from [Bawden et al. (2022)](https://github.com/rbawden/ModFr-Norm).
+#### 3.1 Get evaluation metrics
+
+The script `src/transnormer/evaluation/evaluate.py` computes a harmonized accuracy score and the normalized Levenshtein distance. The metrics and their computation are adopted from [Bawden et al. (2022)](https://github.com/rbawden/ModFr-Norm).
 
 ```
 usage: evaluate.py [-h] --input-type {jsonl,text} [--ref-file REF_FILE] [--pred-file PRED_FILE]
@@ -294,17 +279,18 @@ Example call:
 
 ```bash
 python3 src/transnormer/evaluation/evaluate.py \
-  --input-type jsonl --ref-file hidden/predictions/d037b975.jsonl \
-  --pred-file hidden/predictions/d037b975.jsonl \
+  --input-type jsonl --ref-file d037b975.jsonl \
+  --pred-file d037b975.jsonl \
   --ref-field=norm --pred-field=pred -a both \
-  --sent-wise-file hidden/sent_scores/sent_scores_d037b975.pkl \
-  --test-config hidden/test_configs/d1b1ea77.toml \
-  >> hidden/eval.jsonl
+  --sent-wise-file sent_scores_d037b975.pkl \
+  --test-config d1b1ea77.toml 
 ```
 
-In this case, the gold normalizations ("ref") and auto-generated normalizations ("pred") are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. If `ref` and `pred` texts are stored in different files, the files must be in the same order (i.e. example in line 1 of the ref-file refers to the example in line 1 of the pred-file, etc.). Global evaluation metrics are printed to stdout by default and can be redirected, as in the example above.
+In this case, the gold normalizations (*ref*) and auto-generated normalizations (*pred*) are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. 
+If *ref* and *pred* texts are stored in different files, the examples in the files must be in the same order. 
+Global evaluation metrics are printed to stdout by default and can be redirected into a file.
 
-If you have a single JSONL file with original input, predictions and gold labels, you probably want to write the sentence-wise accuracy scores to this file, that have been computed by `evaluate.py`. This can be done with `src/transnormer/evaluation/add_sent_scores.py`:
+If you have a single JSONL file with original input, predictions and gold labels and you want to write the sentence-wise accuracy scores (that have been computed by `evaluate.py`) to this file, you can do this with `src/transnormer/evaluation/add_sent_scores.py`:
 
 ```
 usage: add_sent_scores.py [-h] [-p PROPERTY] scores data
@@ -331,87 +317,15 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
 ```
 
-#### 3.2 Inspecting and analyzing outputs
 
-**TODO**, see [this issue](https://github.com/ybracke/transnormer/issues/93)
+#### 3.2 `pred_eval.sh`
 
-Use `jq` to create a text-only version from the JSONL files containing the predictions and then call `diff` on that. Example:
-```bash
-jq -r '.norm' ./8ae3fd47.jsonl > norm
-jq -r '.pred' ./8ae3fd47.jsonl > pred
-code --diff norm pred
-```
-
-## Results
-
-**Note:** This section will be continously updated.
-
-Scores on a test set extracted from the [DTA EvalCorpus](https://kaskade.dwds.de/~moocow/software/dtaec/) (13 documents, ~18,000 sentences; ~400,000 tokens):
-
-| Method | WordAcc | WordAcc (`-i`) |
-| --- | --- | --- |
-| identity | 79.59 | 79.80 |
-| translit | 93.91 | 94.17 |
-| transnormer | 98.93 | 99.18 |
-
-The metric used is the harmonized word accurracy explained [above](#31-metrics); `-i` denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalizaiton are ignored).
-For the baseline method `identity` the historical text is simply treated as the normalization and compared to the gold normalization. The method `translit` is a version of `identity`, where extinct German graphemes are replaced by their modern counterparts (e.g. replaces every `ſ` with `s`). The `transnormer` model used here is a `byt5-small` model, with downstream training on a different section of the DTA EvalCorpus (~204K sentences).
+This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
 
 
-## Background
-
-In this section you find information on the institutional and theoretical background of the project.
-
-### Text+
+## Project
 
 This project is developed at the [Berlin-Brandenburg Academy of Sciences and Humanities](https://www.bbaw.de) (Berlin-Brandenburgische Akademie der Wissenschaften, BBAW) within the national research data infrastructure (Nationale Forschungsdateninfrastruktur, NFDI) [Text+](https://www.text-plus.org/).
-
-### Description
-
-We use a transformer encoder-decoder model. The encoder-decoder
-gets warm-started with pre-trained models and fine-tuned on a dataset for
-lexical normalization.
-
-1. Pre-trained encoder for historic German
-2. Pre-trained decoder for modern German
-3. Plug encoder and decoder together by supervised learning with labeled data
-
-Intuition: We create a model from an encoder that knows a lot about historical
-  language, and a decoder that knows a lot about modern language and plug them
-  together by training them on gold-normalized data. Both encoder and decoder can be pre-trained on large quantities of unlabeled data (historic/modern), which are more readily available than labeled data.
-
-### CAB
-
-This normalizer developed in this project is intended to become the successor of the normalizing component of the Cascaded Analysis Broker (CAB), developed at the BBAW by Bryan Jurish ([CAB webpage](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [CAB web service](https://kaskade.dwds.de/~moocow/software/DTA-CAB/), [Jurish (2012)](https://publishup.uni-potsdam.de/opus4-ubp/frontdoor/index/index/docId/5562)).
-
-CAB utilizes hand-craftet rules, edit distances, lexicon checks hidden markov language models, and an exception lexicon.
-
-#### `transnormer` vs. `CAB`
-
-Overview of main changes `transnormer` makes as compared to `CAB`.
-
-##### Machine learning  <!-- omit in toc -->
-
-* Being based on the transformer architecture, this project uses state-of-the-art machine learning technology.
-* Training machine learning models can be continued once more and/or better training data is available, thus allowing a continuous improvement of the models.
-* Machine learning should help to find better normalizations for unknown texts and contexts.
-* By using pre-trained transformer models we can leverage linguistic knowledge from large quantities of data
-
-##### Sequence-to-sequence  <!-- omit in toc -->
-
-The `transnormer` models are sequence-to-sequence models. This means, they take as input a string of unnormalized text and return a string of normalized text. This is different from CAB, which is a sequence tagger, where the original text is first tokenized and then, secondly, each token is assigned a single label.
-
-As a consequence, `transnormer` can normalize word separation, e.g. normalize `gehts` to `geht es` and `aller Hand` to `allerhand`, while CAB cannot. CAB can only assign one label per token, i.e. would (at best) normalize `gehts` to the pseudo-token `geht_es` and normalize each token in `aller Hand` separately, thereby producing the suboptimal normalization `aller Hand`. In short, whitespace in output is no longer contingent on the tokenization of the input.
-
-##### Leverage large language models  <!-- omit in toc -->
-
-* Pretrained LLMs have general capabilities concerning language understanding derived from being trained on large quantities of textual data in one or more languages.
-* This knowledge should help the fine-tuned model to generalize better and deal better with context than CAB does.
-
-##### Maintainability  <!-- omit in toc -->
-
-* We base the program on components and libraries that are maintained by large communities, institutions or companies (e.g. [Huggingface](https://huggingface.co/)), instead of in-house developments that are less well supported.
-* We move away from a C- and Perl-based program to a Python-based program, which has a larger community of users and developers.
 
 
 ## License
