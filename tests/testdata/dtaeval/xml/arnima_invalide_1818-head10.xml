@@ -10,40 +10,40 @@
  !  Description: token-aligned training+evaluation data for canonicalization and error-correction
  !  Contact: Bryan Jurish <jurish@bbaw.de>
  !  Contributors: Bryan Jurish, Henriette Ast, Marko Drotschmann, and Christian Thomas
- !  
+ !
  !  Licensing:
  !    This corpus was created by semi-automatic alignment of a Deutsches Textarchiv (DTA)
  !    text with a contemporary edition drawn from Project Gutenberg and/or the TextGrid
  !    Digital Library.
- !  
+ !
  !    The Deutsches Textarchiv text sources are distributed under the terms of the
  !    Creative Commons Attribution-NonCommercial 3.0 Unported License, see
  !    http://creativecommons.org/licenses/by-nc/3.0/ and
  !    http://www.deutschestextarchiv.de/book/show/arnima_invalide_1818/
- !  
+ !
  !    Contemporary text sources from Project Gutenberg are distributed under the terms
  !    of the The Project Gutenberg License, see
  !    http://www.gutenberg.org/wiki/Gutenberg:The_Project_Gutenberg_License
- !  
+ !
  !    Contemporary text sources from the TextGrid Digital Library were provided
  !    by TextGrid from the data stock of TextGrid's Digital Library, www.editura.de,
  !    and are published under the Creative Commons "by" license version 3.0, see
  !    http://creativecommons.org/licenses/by/3.0/ and http://textgrid.de/en/digitale-bibliothek
- !  
+ !
  !    The aligned corpus and this file are distributed under the terms of the
  !    Creative Commons Attribution-NonCommercial 3.0 Unported License, see
  !    http://creativecommons.org/licenses/by-nc/3.0/
- !  
+ !
  !  Attribution:
  !    If you make use of this corpus in your research, we ask that you cite one
  !    or both of the following articles in any associated publications:
- !  
+ !
  !    Jurish, B., M. Drotschmann, & H. Ast. "Constructing a canonicalized corpus of
  !      historical German by text alignment." In P. Bennett, M. Durrell, S.
  !      Scheible, and R. J. Whitt (editors), New Methods in Historical Corpora,
  !      volume 3 of Corpus Linguistics and Interdisciplinary Perspectives on
  !      Language (CLIP), pages 221-234. Narr, Tübingen, 2013.
- !  
+ !
  !    Jurish, B. & H. Ast. "Using an alignment-based lexicon for canonicalization
  !      of historical text." In J. Gippert & R. Gehrke (editors), Historical
  !      Corpora: Challenges and Perspectives, volume 5 of Corpus Linguistics and

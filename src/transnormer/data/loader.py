@@ -1,6 +1,7 @@
 from functools import wraps
 import itertools
 import glob
+import json
 import os
 import re
 import time
@@ -309,15 +310,20 @@ def load_data(
 
     for path in paths:
         # Call read_ function depending on dataset
-        if "dtaeval" in path:
+        if ("dtaeval" in path) and ("without" not in path):
             # TODO|s
             # - Is the match check for the dataset path/name okay like this?
             # - Same question for _find_split
             # - Where/how do the filter_kwargs get passed for filtering certain XML elements
-            filter_kwargs: Dict[str, Union[str, List[str]]] = {}
-            o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
-            dname = "dtaeval"
-            split = _find_split(path)
+            if "xml" in path:
+                filter_kwargs: Dict[str, Union[str, List[str]]] = {}
+                o = read_dtaeval_raw(path, metadata=True, **filter_kwargs)
+                dname = "dtaeval-v3.0"
+                split = _find_split(path)
+            elif "json" in path:
+                o = read_dtajsonl_raw(path)
+                dname = "dtaeval-v4.2"
+                split = _find_split(path)
 
         elif "ridges/bollmann-split" in path:
             o = read_ridges_raw(path)
@@ -330,9 +336,21 @@ def load_data(
             # dname = "germanc_gs"
             # split = _find_split(path)
 
-        elif "deu_news_2020" in path:
+        elif "deu_news_" in path:
             o = read_leipzig_raw(path)
-            dname = "deu_news_2020"
+            match = re.search(r"20\d\d", path)
+            if match:
+                dname = "deu_news_" + match.group(0)
+            else:
+                raise ValueError(
+                    "There should be a year >=2000 in the path for this corpus."
+                )
+            split = _find_split(path)
+
+        elif "dtak" in path:
+            o = read_dtajsonl_raw(path)
+            match = re.search(r"dtak-.*\d\d\d\d-\d\d\d\d", path)
+            dname = match.group(0) if match else "dtak"
             split = _find_split(path)
 
         yield (dname, split, o)
@@ -391,7 +409,7 @@ def read_ridges_raw(path: str) -> Dict[str, List[str]]:
         # The two elements in the outermost list are orig and norm columns
         doc_tok = load_tsv_to_lists(docpath, keep_sentences=True)
         # Sentences are converted from List[str] to str
-        doc = detokenize_doc(doc_tok)
+        doc = detokenize_doc(doc_tok)  # type: ignore[arg-type]
         # Collect all sentences in list
         all_sents_orig.extend([sent for sent in doc[0]])
         all_sents_norm.extend([sent for sent in doc[1]])
@@ -414,12 +432,50 @@ def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
     all_sents = []
     for docpath in filepath_gen(path):
         # Load document
+        doc = []
         with open(docpath, "r", encoding="utf-8") as f:
-            doc = f.readlines()
+            for line in f:
+                doc.append(line.strip())
         # Collect all sentences in list
         all_sents.extend(doc)
 
     return {"orig": all_sents, "norm": all_sents}
+
+
+def read_dtajsonl_raw(path: str, metadata: bool = False) -> Dict[str, List[str]]:
+    """
+    Read in DTAK JSONL file and return it as a dict
+
+    Files were created with: https://github.com/ybracke/dta2jsonl
+    Available metadata are year, document name and genre.
+
+    Returns: {"orig" : [...], "norm" : [...], + optional metadata }
+    """
+    all_sents_orig, all_sents_norm = [], []
+    if metadata:
+        all_years, all_docs, all_genres = [], [], []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            # Each data object is a paragraph
+            data = json.loads(line)
+            # Collect all sentences in list
+            all_sents_orig.append(data["text"])
+            all_sents_norm.append(data["norm"])
+            if metadata:
+                all_years.append(data["date"])
+                all_docs.append(data["identifier"])
+                all_genres.append(data["genre"])
+
+    if metadata:
+        return {
+            "orig": all_sents_orig,
+            "norm": all_sents_norm,
+            "year": all_years,
+            "document": all_docs,
+            "genre": all_genres,
+        }
+
+    return {"orig": all_sents_orig, "norm": all_sents_norm}
 
 
 # def read_germanc_raw(path: str) -> Dict[str, List[str]]:
@@ -427,7 +483,9 @@ def read_leipzig_raw(path: str) -> Dict[str, List[str]]:
 
 
 def merge_datasets(
-    dsets: Union[List[datasets.Dataset], Dict[datasets.Dataset, int]], seed: int
+    dsets: Union[List[datasets.Dataset], Dict[datasets.Dataset, int]],
+    seed: int,
+    shuffle: bool = True,
 ) -> datasets.Dataset:
     """
     Merge multiple datasets into a single dataset with optional resampling.
@@ -448,7 +506,12 @@ def merge_datasets(
             if n > ds.num_rows:
                 n = ds.num_rows
             # Shuffle and resample
-            dsets_resampled.append(ds.shuffle(seed=seed).select(range(n)))
+            if shuffle:
+                dset_resampled = ds.shuffle(seed=seed).select(range(n))
+            else:
+                dset_resampled = ds.select(range(n))
+            dsets_resampled.append(dset_resampled)
+
         merged_dataset = datasets.concatenate_datasets(dsets_resampled)
     else:
         raise TypeError("Argument `dsets` must be of type list or dict.")

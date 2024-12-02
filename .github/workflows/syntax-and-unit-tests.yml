@@ -10,12 +10,12 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9']
-    
+
     name: Python ${{ matrix.python-version }} Tests
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup python
       # https://github.com/marketplace/actions/setup-python
       uses: actions/setup-python@v4
@@ -31,13 +31,14 @@ jobs:
         pip install torch==1.12.1
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
+        pip install numpy==1.24.2
         pip install pytest
-        pip install . 
+        pip install .
 
     - name: Lint with flake8
       run: |
-        flake8 --ignore=E501,F401
-    
+        flake8 --ignore=E501,F401,W503
+
     - name: Unit Test with pytest
       run: |
-        pytest 
+        pytest

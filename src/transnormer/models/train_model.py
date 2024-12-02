@@ -1,45 +1,42 @@
 from datetime import datetime
+import math
 import os
 import random
-import time
-import tomli
+import shutil
+from typing import Any, Dict
 
+
+import tomli
 import datasets
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+
 import transformers
-
-from transformers import AutoTokenizer
-from tokenizers.normalizers import Normalizer
-from tokenizers import NormalizedString
-
-from transnormer.data import loader
+from transnormer.data import loader, process
 
 
 def tokenize_input_and_output(
-    batch, tokenizer_input, tokenizer_output, max_length_input, max_length_output
-):
+    batch: Dict,
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    reverse_labels: bool = False,
+) -> Dict:
     """
     Tokenizes a `batch` of input and label strings. Assumes that input string
     (label string) is stored in batch under the key `"orig"` (`"norm"`).
+
+    If reverse_labels=True, `"orig"` and `"norm"` are switched. Use this for training
+    a model that produces reversed predictions, e.g. modern->historical
 
     Function is inspired by `process_data_to_model_inputs` described here:
     https://huggingface.co/blog/warm-starting-encoder-decoder#warm-starting-the-encoder-decoder-model
     """
 
     # Tokenize the inputs and labels
-    inputs = tokenizer_input(
-        batch["orig"],
-        padding="max_length",
-        truncation=True,
-        max_length=max_length_input,
+    inputs = (
+        tokenizer(batch["orig"]) if not reverse_labels else tokenizer(batch["norm"])
     )
-    outputs = tokenizer_output(
-        batch["norm"],
-        padding="max_length",
-        truncation=True,
-        max_length=max_length_output,
+    outputs = (
+        tokenizer(batch["norm"]) if not reverse_labels else tokenizer(batch["orig"])
     )
 
     batch["input_ids"] = inputs.input_ids
@@ -48,72 +45,95 @@ def tokenize_input_and_output(
 
     # Make sure that the PAD token is ignored
     batch["labels"] = [
-        [-100 if token == tokenizer_output.pad_token_id else token for token in labels]
+        [-100 if token == tokenizer.pad_token_id else token for token in labels]
         for labels in batch["labels"]
     ]
 
     return batch
 
 
-# not used yet
-def train(
-    model: transformers.BertForMaskedLM,
-    train_dataloader: DataLoader,
-    val_dataloader: DataLoader,
-    optimizer: torch.optim.Optimizer,
-) -> None:
-    """Training loop"""
+def load_tokenizer(configs: Dict[str, Any]) -> transformers.PreTrainedTokenizerBase:
+    """Load tokenizer object based on config dictionary"""
+    tokenizer = None
 
-    return None
+    # (A) If tokenizer is given explicitly in config file
+    if "tokenizer" in configs["tokenizer"]:
+        # Load input tokenizer
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            configs["tokenizer"]["tokenizer"]
+        )
+        return tokenizer
 
+    # (B) tokenizer not explicitly stated in config file, but via language model
+    # (1) Load tokenizers
+    if "checkpoint_encoder_decoder" in configs["language_models"]:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            configs["language_models"]["checkpoint_encoder_decoder"]
+        )
 
-class CustomNormalizer:
-    def normalize(self, normalized: NormalizedString):
-        # Decompose combining characters
-        normalized.nfd()
-        # Some character conversions
-        normalized.replace("ſ", "s")
-        normalized.replace("ꝛ", "r")
-        normalized.replace(chr(0x0303), "")  # drop combining tilde
-        # convert "Combining Latin Small Letter E" to "e"
-        normalized.replace(chr(0x0364), "e")
-        normalized.replace("æ", "ae")
-        normalized.replace("ů", "ü")
-        normalized.replace("Ů", "Ü")
-        # Unicode composition (put decomposed chars back together)
-        normalized.nfc()
+    return tokenizer
 
 
-# TODO pass this on the command-line
-ROOT = "/home/bracke/code/transnormer"
-CONFIGFILE = os.path.join(ROOT, "training_config.toml")
+def tokenize_dataset_dict(
+    dataset_dict: datasets.DatasetDict,
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    configs,
+) -> datasets.DatasetDict:
+    """
+    Tokenize the datasets in a DatasetDict as specified in the config file.
+
+    """
+
+    # Tokenize by applying map function to the DatasetDict
+    prepared_dataset_dict = dataset_dict.map(
+        tokenize_input_and_output,
+        fn_kwargs={
+            "tokenizer": tokenizer,
+            "reverse_labels": configs["data"].get("reverse_labels", False),
+        },
+        batched=True,
+        batch_size=configs["training_hyperparams"]["batch_size"],
+        load_from_cache_file=False,
+    )
+
+    # Convert to torch tensors
+    prepared_dataset_dict.set_format(
+        type="torch",
+        columns=["input_ids", "attention_mask", "labels"],
+    )
+
+    return prepared_dataset_dict
 
 
-if __name__ == "__main__":
-    # (1) Preparations
-    # Load configs
-    with open(CONFIGFILE, mode="rb") as fp:
-        CONFIGS = tomli.load(fp)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    MODELDIR = os.path.join(ROOT, f"./models/models_{timestamp}")
+def filter_dataset_dict_for_length(
+    dataset_dict: datasets.DatasetDict,
+    configs: Dict,
+) -> datasets.DatasetDict:
+    """Add a length column based on "input_ids" and filter out examples that have
+    lengths out of a given range"""
+    min_length = configs["tokenizer"].get("min_length_input", 0)
+    max_length = configs["tokenizer"].get("max_length_input", -1)
 
-    # Fix seeds for reproducibilty
-    random.seed(CONFIGS["random_seed"])
-    np.random.seed(CONFIGS["random_seed"])
-    torch.manual_seed(CONFIGS["random_seed"])
+    for split, dataset in dataset_dict.items():
+        lengths = [len(s) for s in dataset["input_ids"]]
+        dataset = dataset.add_column("length", lengths)
+        dataset = process.filter_dataset_by_length(dataset, max_length, min_length)
+        dataset_dict[split] = dataset
 
-    # GPU set-up
-    device = torch.device(CONFIGS["gpu"] if torch.cuda.is_available() else "cpu")
+    return dataset_dict
 
-    # (2) Load data
 
-    print("Loading the data ...")
+def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
+    """
+    Load, resample and merge the dataset splits as specified in the config file.
+    """
 
     splits_and_paths = [
-        ("train", CONFIGS["data"]["paths_train"]),
-        ("validation", CONFIGS["data"]["paths_validation"]),
-        ("test", CONFIGS["data"]["paths_test"]),
+        ("train", configs["data"]["paths_train"]),
+        ("validation", configs["data"]["paths_validation"]),
+        ("test", configs["data"]["paths_test"]),
     ]
+
     ds_split_merged = datasets.DatasetDict()
     # Iterate over splits (i.e. train, validation, test)
     for split, paths in splits_and_paths:
@@ -123,123 +143,201 @@ if __name__ == "__main__":
             for path in paths
         ]
         # Map each dataset to the desired number of examples for this dataset
-        num_examples = CONFIGS["data"][f"n_examples_{split}"]
+        num_examples = configs["data"][f"n_examples_{split}"]
         ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}
         # Merge and resample datasets for this split
-        ds = loader.merge_datasets(ds2num_examples, seed=CONFIGS["random_seed"])
+        ds = loader.merge_datasets(
+            ds2num_examples,
+            seed=configs["random_seed"],
+            shuffle=configs["data"].get("do_shuffle", True),
+        )
         ds_split_merged[split] = ds
 
     dataset = ds_split_merged
 
-    # Create smaller datasets from random examples
-    if "subset_sizes" in CONFIGS:
-        train_size = CONFIGS["subset_sizes"]["train"]
-        validation_size = CONFIGS["subset_sizes"]["validation"]
-        test_size = CONFIGS["subset_sizes"]["test"]
-        dataset["train"] = dataset["train"].shuffle().select(range(train_size))
-        dataset["validation"] = (
-            dataset["validation"].shuffle().select(range(validation_size))
-        )
-        dataset["test"] = dataset["test"].shuffle().select(range(test_size))
+    return dataset
 
-    # (3) Tokenize data
 
-    print("Tokenizing and preparing the data ...")
-    start = time.process_time()
+def warmstart_seq2seq_model(
+    configs: Dict[str, Any],
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    device: torch.device,
+) -> transformers.PreTrainedModel:
+    """
+    Load and configure an encoder-decoder model.
+    """
 
-    # Load tokenizers
-    tokenizer_input = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"]
+    model_name = configs["language_models"]["checkpoint_encoder_decoder"]
+    model = transformers.T5ForConditionalGeneration.from_pretrained(model_name).to(
+        device
     )
-    tokenizer_input.backend_tokenizer.normalizer = Normalizer.custom(CustomNormalizer())
-
-    tokenizer_output = AutoTokenizer.from_pretrained(
-        CONFIGS["language_models"]["checkpoint_decoder"]
-    )
-
-    tokenization_kwargs = {
-        # FIXME: it is unclear how/if a custom tokenizer can be passed as a parameter
-        "tokenizer_input": tokenizer_input,
-        "tokenizer_output": tokenizer_output,
-        "max_length_input": CONFIGS["tokenizer"]["max_length_input"],
-        "max_length_output": CONFIGS["tokenizer"]["max_length_output"],
-    }
-
-    # Tokenize by applying a mapping
-    prepared_dataset = dataset.map(
-        tokenize_input_and_output,
-        fn_kwargs=tokenization_kwargs,
-        remove_columns=["orig", "norm"],
-        batched=True,
-        batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-    )
-
-    # Convert to torch tensors
-    prepared_dataset.set_format(
-        type="torch",
-        columns=["input_ids", "attention_mask", "labels"],
-    )
-
-    end = time.process_time()
-    print(f"Elapsed time for tokenization: {end - start}")
-
-    # (4) Load models
-
-    print("Loading the pre-trained models ...")
-
-    model = transformers.EncoderDecoderModel.from_encoder_decoder_pretrained(
-        CONFIGS["language_models"]["checkpoint_encoder"],
-        CONFIGS["language_models"]["checkpoint_decoder"],
-    ).to(device)
+    # Use only model architecture but not pre-trained weights
+    if configs["language_models"].get("from_scratch"):
+        model = transformers.T5ForConditionalGeneration(model.config).to(device)
 
     # Setting the special tokens
-    model.config.decoder_start_token_id = tokenizer_output.cls_token_id
-    model.config.eos_token_id = tokenizer_output.sep_token_id
-    model.config.pad_token_id = tokenizer_output.pad_token_id
-    # model.config.vocab_size = model.config.encoder.vocab_size # TODO
+    model.config.decoder_start_token_id = tokenizer.pad_token_id
+    model.config.eos_token_id = tokenizer.eos_token_id
+    model.config.pad_token_id = tokenizer.pad_token_id
 
-    # Params for beam search decoding
-    model.config.max_length = CONFIGS["tokenizer"]["max_length_output"]
-    model.config.no_repeat_ngram_size = CONFIGS["beam_search_decoding"][
-        "no_repeat_ngram_size"
-    ]
-    model.config.early_stopping = CONFIGS["beam_search_decoding"]["early_stopping"]
-    model.config.length_penalty = CONFIGS["beam_search_decoding"]["length_penalty"]
-    model.config.num_beams = CONFIGS["beam_search_decoding"]["num_beams"]
+    return model
 
-    # (5) Training
 
-    print("Training ...")
+def train_seq2seq_model(
+    model: transformers.PreTrainedModel,
+    train_dataset: datasets.Dataset,
+    eval_dataset: datasets.Dataset,
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    configs: Dict[str, Any],
+    output_dir: str,
+) -> None:
+    """
+    Train an encoder-decoder model with given configurations.
 
+    `model` will be altered by this function.
+    """
+
+    # Set-up training arguments from hyperparameters
     training_args = transformers.Seq2SeqTrainingArguments(
-        output_dir=MODELDIR,
+        output_dir=output_dir,
         predict_with_generate=True,
-        evaluation_strategy=CONFIGS["training_hyperparams"]["eval_strategy"],
-        fp16=CONFIGS["training_hyperparams"]["fp16"],
-        eval_steps=CONFIGS["training_hyperparams"]["eval_steps"],
-        num_train_epochs=CONFIGS["training_hyperparams"]["epochs"],
-        per_device_train_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        per_device_eval_batch_size=CONFIGS["training_hyperparams"]["batch_size"],
-        save_steps=CONFIGS["training_hyperparams"][
-            "save_steps"
-        ],  # Does this work? (custom tokenizer can't be saved)
+        group_by_length=True,
+        load_best_model_at_end=True,
+        optim="adamw_torch",
+        learning_rate=configs["training_hyperparams"]["learning_rate"],
+        num_train_epochs=configs["training_hyperparams"]["epochs"],
+        per_device_train_batch_size=configs["training_hyperparams"]["batch_size"],
+        per_device_eval_batch_size=configs["training_hyperparams"]["batch_size"],
+        fp16=configs["training_hyperparams"]["fp16"],
+        save_strategy=configs["training_hyperparams"]["save_strategy"],
+        logging_strategy=configs["training_hyperparams"]["logging_strategy"],
+        evaluation_strategy=configs["training_hyperparams"]["eval_strategy"],
+        save_total_limit=configs["training_hyperparams"]["save_total_limit"],
     )
+
+    collator = transformers.DataCollatorForSeq2Seq(
+        tokenizer, padding=configs["tokenizer"]["padding"]
+    )
+
+    class CustomCallback(transformers.TrainerCallback):
+        def on_step_end(self, args, state, control, **kwargs):
+            """Evaluate and log every half epoch"""
+            # Determine steps per epoch
+            steps_per_epoch = math.ceil(
+                len(train_dataset) / (args.per_device_train_batch_size * args._n_gpu)
+            )
+            # Trigger evaluation only at the middle of the epoch
+            # Combine this with {eval,logging}_strategy="epoch"
+            if state.global_step % steps_per_epoch == steps_per_epoch // 2:
+                control.should_log = True
+                control.should_evaluate = True
 
     # Instantiate trainer
     trainer = transformers.Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=prepared_dataset["train"],
-        eval_dataset=prepared_dataset["validation"],
-        # compute_metrics=compute_metrics, # TODO
+        data_collator=collator,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        callbacks=[CustomCallback],
     )
 
-    trainer.train()
+    # Run training
+    train_result = trainer.train()
 
-    # (6) Saving the final model
+    # After training
+    trainer.save_model()
+    trainer.create_model_card()
+    trainer.save_state()
 
-    model_path = os.path.join(MODELDIR, "model_final/")
-    model.save_pretrained(model_path)
-    # this fails because a custom tokenizer can't be saved
-    # model_path = f"./models/model_fromtrainer/"
-    # trainer.save_model(model_path)
+    metrics = train_result.metrics
+    metrics["train_samples"] = len(train_dataset)
+    trainer.log_metrics("train", metrics)
+    trainer.save_metrics("train", metrics)
+
+    metrics = trainer.evaluate(metric_key_prefix="eval")
+    metrics["eval_samples"] = len(eval_dataset)
+    trainer.log_metrics("eval", metrics)
+    trainer.save_metrics("eval", metrics)
+
+    # Save tokenizer
+    tokenizer.save_pretrained(output_dir)
+
+    return None
+
+
+def main():
+    ROOT = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
+    )
+    CONFIGFILE = os.path.join(ROOT, "training_config.toml")
+
+    # (1) Preparations
+    # Load configs
+    with open(CONFIGFILE, mode="rb") as fp:
+        CONFIGS = tomli.load(fp)
+    outdir = CONFIGS["training_hyperparams"].get("output_dir")
+    if outdir is not None:
+        if os.path.isabs(outdir):
+            MODELDIR = outdir
+        else:
+            MODELDIR = os.path.join(ROOT, outdir)
+    else:
+        MODELDIR = os.path.join(
+            ROOT, f"./models/models_{datetime.today().strftime('%Y-%m-%d')}"
+        )
+    if not os.path.isdir(MODELDIR):
+        os.makedirs(MODELDIR)
+
+    # Save the config file to model directory
+    shutil.copy(CONFIGFILE, MODELDIR)
+
+    # Fix seeds for reproducibilty
+    random.seed(CONFIGS["random_seed"])
+    np.random.seed(CONFIGS["random_seed"])
+    torch.manual_seed(CONFIGS["random_seed"])
+
+    # GPU set-up
+    gpu_index = CONFIGS.get("gpu")
+    device = torch.device(
+        gpu_index if gpu_index is not None and torch.cuda.is_available() else "cpu"
+    )
+    # Limit memory usage
+    memory_fraction = CONFIGS.get("per_process_memory_fraction")
+    if memory_fraction and torch.cuda.is_available():
+        torch.cuda.set_per_process_memory_fraction(memory_fraction, device)
+
+    # (2) Load data
+
+    print("Loading the data ...")
+    dataset_dict = load_and_merge_datasets(CONFIGS)
+
+    # (3) Tokenize data
+    print("Tokenizing and preparing the data ...")
+    tokenizer = load_tokenizer(CONFIGS)
+    prepared_dataset_dict = tokenize_dataset_dict(dataset_dict, tokenizer, CONFIGS)
+
+    # (3.1) Optional: Filter data for length
+    prepared_dataset_dict = filter_dataset_dict_for_length(
+        prepared_dataset_dict, CONFIGS
+    )
+
+    # (4) Load models
+    print("Loading the pre-trained models ...")
+    model = warmstart_seq2seq_model(CONFIGS, tokenizer, device)
+
+    # (5) Training
+
+    print("Training model ...")
+    train_seq2seq_model(
+        model,
+        prepared_dataset_dict["train"],
+        prepared_dataset_dict["validation"],
+        tokenizer,
+        CONFIGS,
+        MODELDIR,
+    )
+
+
+if __name__ == "__main__":
+    main()

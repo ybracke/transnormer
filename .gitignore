@@ -57,7 +57,7 @@ docs/_build/
 target/
 
 # Data
-/data/
+data/*
 
 # DotEnv configuration
 .env
@@ -93,6 +93,10 @@ temp/
 
 # Don't track the models
 models/*
+!models/*.dvc
 
-# Don't track the training configuration file
-training_config.toml
+# Don't track the template for training configuration file
+training_config_template.toml
+
+hidden/
+notebooks/evaluation
