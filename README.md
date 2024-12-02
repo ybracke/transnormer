@@ -165,7 +165,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 The training and test data must be in JSONL format, where each record is a parallel training sample, e.g. a sentence. The records in the file must at least have the following format:
 
-```json
+```jsonc
 {
     "orig" : "Eyn Theylſtueck", // original spelling
     "norm" : "Ein Teilstück"    // normalized spelling
