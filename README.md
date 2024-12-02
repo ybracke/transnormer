@@ -58,6 +58,8 @@ print(transnormer(sentence, num_beams=4, max_length=128))
 
 ## Installation
 
+In order to reproduce model training and evaluation, install the dependencies and code as described in this section and refer to the documentation in the section on [Usage](#usage).
+
 ### 1. Set up environment
 
 #### 1.a On a GPU <!-- omit in toc -->
