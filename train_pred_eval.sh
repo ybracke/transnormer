@@ -18,15 +18,16 @@ python3 src/transnormer/models/train_model.py
 echo "Finished training: $(date)"
 
 
-# Uncomment next line if only training is required
+# Uncomment next line to stop after training
 # exit
 
+# Last model created
+MODELSDIRNAME=`ls -lt models | grep ^d | head -n 1 | awk '{print $9}'`
 
 #### Computation of training set alignments ####
 
 echo "Started computing train set alignments: $(date)"
 
-MODELSDIRNAME=`ls -lt models | grep ^d | head -n 1 | awk '{print $9}'` # last model created
 TRAINCFG=models/$MODELSDIRNAME/training_config.toml
 OUT1=hidden/statistics/typestats-orig2norm-$MODELSDIRNAME.pkl
 python3 src/transnormer/evaluation/dataset_stats.py -c $TRAINCFG -o $OUT1 --base-layer orig
