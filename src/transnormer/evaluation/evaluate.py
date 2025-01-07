@@ -15,8 +15,9 @@ from transnormer.evaluation import tokenise
 ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../..")
 )
-CACHE = os.path.join(ROOT, ".cache/cached-alignments.pkl")
-if not os.path.isdir(os.path.dirname(CACHE)):
+# CACHE = os.path.join(ROOT, ".cache/cached-alignments.pkl")
+CACHE = None
+if (CACHE is not None) and (not os.path.isdir(os.path.dirname(CACHE))):
     os.makedirs(os.path.dirname(CACHE))
 
 
