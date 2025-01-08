@@ -20,6 +20,7 @@ dependencies = [
     "tomli>=2.0.1",
     "transformers[torch]>=4.31.0",
     "python_Levenshtein==0.21.1",
+    "numpy==1.24.2",
 ]
 
 [project.urls]
