@@ -432,13 +432,14 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
         "training_hyperparams": {
             "batch_size": 1,
             "epochs": 2,
-            # "learning_rate" : 0.001,
+            "learning_rate": 0.001,
             "logging_steps": 1000,
             "eval_steps": 1000,
             "save_strategy": "epoch",
             "eval_strategy": "epoch",
             "logging_strategy": "epoch",
             "fp16": False,  # set to False for byT5-based models
+            "save_total_limit": 1,
         },
     }
     gpu_index = CONFIGS.get("gpu")
