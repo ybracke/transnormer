@@ -19,17 +19,6 @@ def set_seeds(n: int = 42):
     torch.manual_seed(n)
 
 
-def load_model(checkpoint: str, device: torch.device) -> transformers.PreTrainedModel:
-    config = transformers.AutoConfig.from_pretrained(checkpoint)
-    if config.architectures.pop() == "T5ForConditionalGeneration":
-        model = transformers.T5ForConditionalGeneration.from_pretrained(checkpoint).to(
-            device
-        )
-    else:
-        model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
-    return model
-
-
 # Generation function
 def generate_normalization(
     batch: Dict,
@@ -39,20 +28,17 @@ def generate_normalization(
     generation_config: transformers.GenerationConfig,
     tokenizer_kwargs: Dict[str, Union[bool, str, int]],
 ):
+    input_strings = batch["orig"]
     inputs = tokenizer(
-        batch["orig"],
+        input_strings,
         **tokenizer_kwargs,
         return_tensors="pt",
-    )
-    input_ids = inputs.input_ids.to(device)
-    attention_mask = inputs.attention_mask.to(device)
+    ).to(device)
 
-    outputs = model.generate(
-        input_ids, attention_mask=attention_mask, generation_config=generation_config
-    )
-    output_str = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+    outputs = model.generate(**inputs, generation_config=generation_config)
+    output_strings = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    batch["pred"] = output_str
+    batch["pred"] = output_strings
 
     return batch
 
@@ -122,7 +108,8 @@ def main(arguments: Optional[List[str]] = None) -> None:
             tokenizer = translit.exchange_transliterator(tokenizer, transliterator)
 
     # (5) Load model
-    model = load_model(CONFIGS["model"]["checkpoint"], device)
+    checkpoint = CONFIGS["model"]["checkpoint"]
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(checkpoint).to(device)
 
     # (6) Generation
     # Parameters for model output
