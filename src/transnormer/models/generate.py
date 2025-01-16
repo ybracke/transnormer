@@ -19,10 +19,10 @@ def parse_and_check_arguments(
         description="Generates normalizations given a configuration file that specifies the model, the data and parameters."
     )
 
-    # TODO: allow to overwrite configs on command-line?
     parser.add_argument(
         "-c",
         "--config",
+        default="test_config.toml",
         help="Path to the config file (TOML)",
     )
     parser.add_argument(
