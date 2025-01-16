@@ -1,5 +1,6 @@
 import argparse
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
+from functools import partial
 
 import tomli
 import random
@@ -10,6 +11,50 @@ import transformers
 
 from transnormer.preprocess import translit
 from transnormer.data.process import sort_dataset_by_length
+
+
+def set_seeds(n: int = 42):
+    random.seed(n)
+    np.random.seed(n)
+    torch.manual_seed(n)
+
+
+def load_model(checkpoint: str, device: torch.device) -> transformers.PreTrainedModel:
+    config = transformers.AutoConfig.from_pretrained(checkpoint)
+    if config.architectures.pop() == "T5ForConditionalGeneration":
+        model = transformers.T5ForConditionalGeneration.from_pretrained(checkpoint).to(
+            device
+        )
+    else:
+        model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
+    return model
+
+
+# Generation function
+def generate_normalization(
+    batch: Dict,
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    model: transformers.PreTrainedModel,
+    device: torch.device,
+    generation_config: transformers.GenerationConfig,
+    tokenizer_kwargs: Dict[str, Union[bool, str, int]],
+):
+    inputs = tokenizer(
+        batch["orig"],
+        **tokenizer_kwargs,
+        return_tensors="pt",
+    )
+    input_ids = inputs.input_ids.to(device)
+    attention_mask = inputs.attention_mask.to(device)
+
+    outputs = model.generate(
+        input_ids, attention_mask=attention_mask, generation_config=generation_config
+    )
+    output_str = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    batch["pred"] = output_str
+
+    return batch
 
 
 def parse_and_check_arguments(
@@ -44,10 +89,8 @@ def main(arguments: Optional[List[str]] = None) -> None:
         CONFIGS = tomli.load(fp)
 
     # (2) Preparations
-    # (2.1) Fix seeds for reproducibilty
-    random.seed(CONFIGS["random_seed"])
-    np.random.seed(CONFIGS["random_seed"])
-    torch.manual_seed(CONFIGS["random_seed"])
+    # (2.1) Fix random, numpy and torch seeds for reproducibilty
+    set_seeds(CONFIGS["random_seed"])
 
     # (2.2) GPU set-up
     gpu_index = CONFIGS.get("gpu")
@@ -56,32 +99,18 @@ def main(arguments: Optional[List[str]] = None) -> None:
     )
 
     # (3) Data
-    path = CONFIGS["data"]["path_test"]
-    ds = datasets.load_dataset("json", data_files=path)
+    ds = datasets.load_dataset("json", data_files=CONFIGS["data"]["path_test"])
 
-    # Optional: Take only N examples
-    if "n_examples_test" in CONFIGS["data"]:
-        n = CONFIGS["data"]["n_examples_test"]
-        # Note: "train" is the default dataset name assigned
+    # Optional: Use a fixed number of test set examples
+    n = CONFIGS["data"].get("n_examples_test")
+    if n:
         ds["train"] = ds["train"].shuffle().select(range(n))
 
-    # FIXME: only for 0_TEST Remove and rename columns
-    # ds["train"] = ds["train"].remove_columns(["author", "basename", "title", "date", "genre", "norm", "par_id", "done"])
-    # ds["train"] = ds["train"].rename_column("text", "orig")
-    # ds["train"] = ds["train"].rename_column("norm_manual", "norm")
-
     # (4) Tokenizers and transliterator
-    # Load tokenizer(s)
-    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+    # Load tokenizer
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
         CONFIGS["tokenizer"]["checkpoint_in"]
     )
-    if "checkpoint_out" in CONFIGS["tokenizer"]:
-        tokenizer_output = transformers.AutoTokenizer.from_pretrained(
-            CONFIGS["tokenizer"]["checkpoint_out"]
-        )
-    else:
-        # Output tokenizer is simply a reference to input tok
-        tokenizer_output = tokenizer_input
 
     # Optional: replace tokenizer's normalization component with a custom transliterator
     if "input_transliterator" in CONFIGS["tokenizer"]:
@@ -89,43 +118,15 @@ def main(arguments: Optional[List[str]] = None) -> None:
             transliterator = translit.Transliterator1()
         else:
             transliterator = None
-        tokenizer_input = translit.exchange_transliterator(
-            tokenizer_input, transliterator
-        )
+        if transliterator:
+            tokenizer = translit.exchange_transliterator(tokenizer, transliterator)
 
     # (5) Load model
-    checkpoint = CONFIGS["model"]["checkpoint"]
-    config = transformers.AutoConfig.from_pretrained(checkpoint)
-    # HOTFIX for using byt5
-    if config.architectures.pop() == "T5ForConditionalGeneration":
-        model = transformers.T5ForConditionalGeneration.from_pretrained(checkpoint).to(
-            device
-        )
-    else:
-        model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
+    model = load_model(CONFIGS["model"]["checkpoint"], device)
 
     # (6) Generation
     # Parameters for model output
     gen_cfg = transformers.GenerationConfig(**CONFIGS["generation_config"])
-
-    # Generation function
-    def generate_normalization(batch):
-        inputs = tokenizer_input(
-            batch["orig"],
-            **CONFIGS["tokenizer_configs"],
-            return_tensors="pt",
-        )
-        input_ids = inputs.input_ids.to(device)
-        attention_mask = inputs.attention_mask.to(device)
-
-        outputs = model.generate(
-            input_ids, attention_mask=attention_mask, generation_config=gen_cfg
-        )
-        output_str = tokenizer_output.batch_decode(outputs, skip_special_tokens=True)
-
-        batch["pred"] = output_str
-
-        return batch
 
     # Sort by length
     dataset = ds["train"]
@@ -139,15 +140,25 @@ def main(arguments: Optional[List[str]] = None) -> None:
     )
     ds["train"] = dataset
 
+    # Prepare generation function as a partial function (only batch missing)
+    normalize = partial(
+        generate_normalization,
+        tokenizer=tokenizer,
+        model=model,
+        device=device,
+        generation_config=gen_cfg,
+        tokenizer_kwargs=CONFIGS["tokenizer_configs"],
+    )
+
     # Call generation function
     ds = ds.map(
-        generate_normalization,
+        normalize,
         batched=True,
         batch_size=CONFIGS["generation"]["batch_size"],
         load_from_cache_file=False,
     )
 
-    # If sorted by length: Restore original order
+    # Sort in original order
     ds["train"] = ds["train"].sort(index_column)
     ds["train"] = ds["train"].remove_columns(index_column)
 
