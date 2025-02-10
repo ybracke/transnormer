@@ -149,7 +149,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
     )
 
     # Optional: Filter out samples that exceed given length
-    k = CONFIGS["data"].get("max_length")
+    k = CONFIGS["data"].get("max_bytelength")
     if k:
         ds = filter_dataset_by_length(ds, max_length=k, name_length_column=len_column)
 
