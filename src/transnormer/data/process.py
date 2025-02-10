@@ -9,9 +9,13 @@ def sort_dataset_by_length(
     add_original_index: bool = True,
     name_index_column: str = "#",
     descending: bool = False,
+    use_bytelength: bool = False,
 ) -> datasets.Dataset:
     """Sort a datasets.Dataset by string length of text in `column`"""
-    lengths = [len(s) for s in dataset[column]]
+    if use_bytelength:
+        lengths = [len(bytes(s, "utf8")) for s in dataset[column]]
+    else:
+        lengths = [len(s) for s in dataset[column]]
     dataset = dataset.add_column(name_length_column, lengths)
     if add_original_index:
         indexes = [i for i in range(len(dataset))]
