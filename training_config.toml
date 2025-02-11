@@ -1,58 +1,42 @@
 # -*- coding = utf-8 -*-
 
 # Select GPU
-gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
+gpu = "cuda:0"
 per_process_memory_fraction = 0.95
 
-# Random seed (fix for reproducibility)
+# Fix random seed for reproducibility
 random_seed = 42
-
 
 # Data
 [data]
 paths_train = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1600-1699/dtak-train.jsonl",
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-train.jsonl",
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-train.jsonl",
-    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-train.jsonl",
-    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-train.jsonl",
-    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-train.jsonl",
+    "data/dtak-transnormer-basic-v1/data/train/1600-1699",
+    "data/dtak-transnormer-basic-v1/data/train/1700-1799",
+    "data/dtak-transnormer-basic-v1/data/train/1800-1899",
     ]
 
 paths_validation = [
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1600-1699/dtak-validation.jsonl",
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-validation.jsonl",
-    "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1800-1899/dtak-validation.jsonl",
-    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-validation.jsonl",
-    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-validation.jsonl",
-    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-validation.jsonl",
+    "data/dtak-transnormer-basic-v1/data/validation/1600-1699",
+    "data/dtak-transnormer-basic-v1/data/validation/1700-1799",
+    "data/dtak-transnormer-basic-v1/data/validation/1800-1899",
     ]
 
 paths_test = [
-    "/home/bracke/data/dtaec/jsonl/v06/bracke-split/dtaec-test.jsonl",
-    # "data/interim/dtak-v03-1600-1699/dtak-v03-1600-1699-test.jsonl",
-    # "data/interim/dtak-v03-1700-1799/dtak-v03-1700-1799-test.jsonl",
-    # "data/interim/dtak-v03-1800-1899/dtak-v03-1800-1899-test.jsonl",
+    "data/dtak-transnormer-basic-v1/data/test/1600-1699",
     ]
 n_examples_train = [
     1_000_000_000, # all
     1_000_000_000, # all
     1_000_000_000, # all
-    # 10_000,
-    # 1_000_000_000,
     ]
 n_examples_validation = [
     1_000_000_000, # all
     1_000_000_000, # all
     1_000_000_000, # all
-    # 1_000_000_000,
-    # 1_000_000_000,
     ]
 # not used
 n_examples_test = [
     1,
-    # 1_000_000_000,
-    # 1_000_000_000,
     ]
 # reverse_labels = false
 # do_shuffle = true
@@ -62,7 +46,6 @@ tokenizer = "google/byt5-small"
 padding = "longest"
 min_length_input = 0
 max_length_input = 512
-# max_length_output = 512
 # input_transliterator = "Transliterator1"
 
 # Base model(s)
@@ -79,4 +62,4 @@ save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
 save_total_limit = 3
-# output_dir = "./models/models_2024-09-12"
+# output_dir = "./models/models_X"

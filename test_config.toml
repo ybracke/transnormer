@@ -1,14 +1,14 @@
 # -*- coding = utf-8 -*-
 
 # Select GPU
-gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
+gpu = "cuda:0"
 
-# Random seed (fix for reproducibility)
+# Fix random seed for reproducibility
 random_seed = 42
 
 [data]
 path_test = "data/dtak-transnormer-basic-v1/data/test/1700-1799"
-split = "test"
+# split = "test"
 # n_examples_test = 100
 max_bytelength = 510
 
