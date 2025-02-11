@@ -138,10 +138,16 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
     # Iterate over splits (i.e. train, validation, test)
     for split, paths in splits_and_paths:
         # Load all datasets for this split
-        dsets = [
-            datasets.load_dataset("json", data_files=path, split="train")
-            for path in paths
-        ]
+        dsets = []
+        for path in paths:
+            if os.path.isfile(path):
+                ds = datasets.load_dataset("json", data_files=path, split="train")
+                dsets.append(ds)
+            elif os.path.isdir(path):
+                ds = datasets.load_dataset("json", data_dir=path, split="train")
+                dsets.append(ds)
+            else:
+                raise Exception(f"Path '{path}' is no existing file or directory.")
         # Map each dataset to the desired number of examples for this dataset
         num_examples = configs["data"][f"n_examples_{split}"]
         ds2num_examples = {dsets: num_examples[i] for i, dsets in enumerate(dsets)}

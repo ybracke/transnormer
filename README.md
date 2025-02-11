@@ -159,7 +159,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 ### Preparation 2: Data preparation
 
-The training and test data must be in JSONL format, where each record is a parallel training sample, e.g. a sentence. The records in the file must at least have the following format:
+The training and test data must be in [JSONL](https://jsonlines.org/) format, where each record is a parallel training sample, e.g. a sentence. The records in the files must at least have the following format:
 
 ```jsonc
 {
@@ -193,7 +193,7 @@ The `random_seed` parameter defines a fixed random seed (`42` in the default set
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. See [data preparation](#preparation-2-data-preparation) for data format. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to JSONL files or to directories that only contain JSONL files. See [data preparation](#preparation-2-data-preparation) for more information on the data format. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
 
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must contain the same amount of elements as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
