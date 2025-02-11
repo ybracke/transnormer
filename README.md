@@ -233,7 +233,15 @@ optional arguments:
 
 #### Test config file
 
-The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
+The test config file configures which data, tokenizer, model and generation parameters are used when generating normalizations with `generate.py`. The template file `test_config.toml` illustrates the usage; some sections are identical to the [training config file](#training-config-file). The following is a description of the most relevant parts of the config file.
+
+##### Test data <!-- omit in toc -->
+
+The `[data]` specifies information concerning the test data.
+- `path_test` references either a local JSONL file (e.g. `"data/test.jsonl"`), a local directory containing JSONL files (e.g. `"data/test"`) or the name of a Hugging Face dataset (e.g. `"ybracke/dta-reviEvalCorpus-v1"`).
+- Only if `path_test` is a Hugging Face dataset, `split` should be specified. It must reference any of the datasets existing splits (e.g. `"test"`).
+- `max_bytelength` is optional and can be specified to set an upper boundary for the length of individual inputs, i.e. to remove all samples from the test set where the `"orig"` string exceeds the byte length specified here.
+- `n_examples_test` is optional and can be included to specify the number of test examples to use. If this is specified to a number *N* lower than the total of test set samples (possibly after filtering according to `max_bytelength`), a random *N* samples will be selected for testing.
 
 ##### Generation configurations <!-- omit in toc -->
 

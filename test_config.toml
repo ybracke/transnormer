@@ -7,8 +7,10 @@ gpu = "cuda:0"  # when you did `export CUDA_VISIBLE_DEVICES=1` first
 random_seed = 42
 
 [data]
-path_test = "/home/bracke/code/transnormer/data/raw/dta/jsonl/v09-lm/not-dtaec/1700-1799/dtak-test.jsonl"
-# n_examples_test = 24
+path_test = "data/dtak-transnormer-basic-v1/data/test/1700-1799"
+split = "test"
+# n_examples_test = 100
+max_bytelength = 510
 
 [tokenizer]
 checkpoint_in = "google/byt5-small"
@@ -16,10 +18,9 @@ checkpoint_in = "google/byt5-small"
 [tokenizer_configs]
 padding = "longest" # pad to the longest sequence in batch
 truncation = false
-max_length = 1024
 
 [model]
-checkpoint = "/home/bracke/code/transnormer/models/models_2024-10-15"
+checkpoint = "models/models_2024-12-20"
 
 [generation]
 batch_size = 32

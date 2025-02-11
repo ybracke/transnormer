@@ -1,5 +1,8 @@
 import argparse
-from typing import List, Optional
+import os
+
+from functools import partial
+from typing import Dict, List, Optional, Union
 
 import tomli
 import random
@@ -9,7 +12,62 @@ import datasets
 import transformers
 
 from transnormer.preprocess import translit
-from transnormer.data.process import sort_dataset_by_length
+from transnormer.data.process import sort_dataset_by_length, filter_dataset_by_length
+
+
+def set_seeds(n: int = 42):
+    random.seed(n)
+    np.random.seed(n)
+    torch.manual_seed(n)
+
+
+# Generation function
+def generate_normalization(
+    batch: Dict,
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    model: transformers.PreTrainedModel,
+    device: torch.device,
+    generation_config: transformers.GenerationConfig,
+    tokenizer_kwargs: Dict[str, Union[bool, str, int]],
+):
+    input_strings = batch["orig"]
+    inputs = tokenizer(
+        input_strings,
+        **tokenizer_kwargs,
+        return_tensors="pt",
+    ).to(device)
+
+    outputs = model.generate(**inputs, generation_config=generation_config)
+    output_strings = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    batch["pred"] = output_strings
+
+    return batch
+
+
+def load_data(
+    path, n_examples: Optional[int] = None, split: Optional[str] = None
+) -> datasets.Dataset:
+    """
+    Load the dataset.
+
+    Dataset can be either a JSON file, a directory of JSON files or
+    huggingface name of a dataset.
+    """
+
+    # Which split to use?
+    s = split if split is not None else "train"
+    if os.path.isfile(path):
+        ds = datasets.load_dataset("json", data_files=path, split=s)
+    elif os.path.isdir(path):
+        ds = datasets.load_dataset("json", data_dir=path, split=s)
+    else:
+        try:
+            ds = datasets.load_dataset(path, split=s)
+        except datasets.exceptions.DatasetNotFoundError as e:
+            raise e(f"Path '{path}' is no existing file or directory.")
+
+    return ds
 
 
 def parse_and_check_arguments(
@@ -19,10 +77,10 @@ def parse_and_check_arguments(
         description="Generates normalizations given a configuration file that specifies the model, the data and parameters."
     )
 
-    # TODO: allow to overwrite configs on command-line?
     parser.add_argument(
         "-c",
         "--config",
+        default="test_config.toml",
         help="Path to the config file (TOML)",
     )
     parser.add_argument(
@@ -44,10 +102,8 @@ def main(arguments: Optional[List[str]] = None) -> None:
         CONFIGS = tomli.load(fp)
 
     # (2) Preparations
-    # (2.1) Fix seeds for reproducibilty
-    random.seed(CONFIGS["random_seed"])
-    np.random.seed(CONFIGS["random_seed"])
-    torch.manual_seed(CONFIGS["random_seed"])
+    # (2.1) Set fixed seed (random, numpy, torch) for reproducibilty
+    set_seeds(CONFIGS["random_seed"])
 
     # (2.2) GPU set-up
     gpu_index = CONFIGS.get("gpu")
@@ -56,32 +112,15 @@ def main(arguments: Optional[List[str]] = None) -> None:
     )
 
     # (3) Data
-    path = CONFIGS["data"]["path_test"]
-    ds = datasets.load_dataset("json", data_files=path)
-
-    # Optional: Take only N examples
-    if "n_examples_test" in CONFIGS["data"]:
-        n = CONFIGS["data"]["n_examples_test"]
-        # Note: "train" is the default dataset name assigned
-        ds["train"] = ds["train"].shuffle().select(range(n))
-
-    # FIXME: only for 0_TEST Remove and rename columns
-    # ds["train"] = ds["train"].remove_columns(["author", "basename", "title", "date", "genre", "norm", "par_id", "done"])
-    # ds["train"] = ds["train"].rename_column("text", "orig")
-    # ds["train"] = ds["train"].rename_column("norm_manual", "norm")
+    data_path = CONFIGS["data"]["path_test"]
+    split = CONFIGS["data"]["split"]
+    ds = load_data(data_path, split)
 
     # (4) Tokenizers and transliterator
-    # Load tokenizer(s)
-    tokenizer_input = transformers.AutoTokenizer.from_pretrained(
+    # Load tokenizer
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
         CONFIGS["tokenizer"]["checkpoint_in"]
     )
-    if "checkpoint_out" in CONFIGS["tokenizer"]:
-        tokenizer_output = transformers.AutoTokenizer.from_pretrained(
-            CONFIGS["tokenizer"]["checkpoint_out"]
-        )
-    else:
-        # Output tokenizer is simply a reference to input tok
-        tokenizer_output = tokenizer_input
 
     # Optional: replace tokenizer's normalization component with a custom transliterator
     if "input_transliterator" in CONFIGS["tokenizer"]:
@@ -89,70 +128,64 @@ def main(arguments: Optional[List[str]] = None) -> None:
             transliterator = translit.Transliterator1()
         else:
             transliterator = None
-        tokenizer_input = translit.exchange_transliterator(
-            tokenizer_input, transliterator
-        )
+        if transliterator:
+            tokenizer = translit.exchange_transliterator(tokenizer, transliterator)
 
     # (5) Load model
     checkpoint = CONFIGS["model"]["checkpoint"]
-    config = transformers.AutoConfig.from_pretrained(checkpoint)
-    # HOTFIX for using byt5
-    if config.architectures.pop() == "T5ForConditionalGeneration":
-        model = transformers.T5ForConditionalGeneration.from_pretrained(checkpoint).to(
-            device
-        )
-    else:
-        model = transformers.EncoderDecoderModel.from_pretrained(checkpoint).to(device)
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(checkpoint).to(device)
 
-    # (6) Generation
+    # (6) Data preparation
+    # Sort by length
+    index_column = "#"
+    len_column = "len"
+    ds = sort_dataset_by_length(
+        ds,
+        "orig",
+        descending=True,
+        name_index_column=index_column,
+        name_length_column=len_column,
+        use_bytelength=True,
+    )
+
+    # Optional: Filter out samples that exceed given length
+    k = CONFIGS["data"].get("max_bytelength")
+    if k:
+        ds = filter_dataset_by_length(ds, max_length=k, name_length_column=len_column)
+
+    # Optional: Clip dataset to fixed number of samples
+    n = CONFIGS["data"].get("n_examples_test")
+    if n:
+        ds = ds.shuffle().select(range(n))
+
+    # (7) Generation
     # Parameters for model output
     gen_cfg = transformers.GenerationConfig(**CONFIGS["generation_config"])
 
-    # Generation function
-    def generate_normalization(batch):
-        inputs = tokenizer_input(
-            batch["orig"],
-            **CONFIGS["tokenizer_configs"],
-            return_tensors="pt",
-        )
-        input_ids = inputs.input_ids.to(device)
-        attention_mask = inputs.attention_mask.to(device)
-
-        outputs = model.generate(
-            input_ids, attention_mask=attention_mask, generation_config=gen_cfg
-        )
-        output_str = tokenizer_output.batch_decode(outputs, skip_special_tokens=True)
-
-        batch["pred"] = output_str
-
-        return batch
-
-    # Sort by length
-    dataset = ds["train"]
-    index_column = "#"
-    dataset = sort_dataset_by_length(
-        dataset,
-        "orig",
-        descending=True,
-        keep_length_column=False,
-        name_index_column=index_column,
+    # Prepare generation function as a partial function (only batch missing)
+    normalize = partial(
+        generate_normalization,
+        tokenizer=tokenizer,
+        model=model,
+        device=device,
+        generation_config=gen_cfg,
+        tokenizer_kwargs=CONFIGS["tokenizer_configs"],
     )
-    ds["train"] = dataset
 
     # Call generation function
     ds = ds.map(
-        generate_normalization,
+        normalize,
         batched=True,
         batch_size=CONFIGS["generation"]["batch_size"],
         load_from_cache_file=False,
     )
 
-    # If sorted by length: Restore original order
-    ds["train"] = ds["train"].sort(index_column)
-    ds["train"] = ds["train"].remove_columns(index_column)
+    # Sort in original order
+    ds = ds.sort(index_column)
+    ds = ds.remove_columns([index_column, len_column])
 
-    # (7) Save outputs
-    ds["train"].to_json(args.out, force_ascii=False)
+    # (8) Save outputs
+    ds.to_json(args.out, force_ascii=False)
 
 
 if __name__ == "__main__":
