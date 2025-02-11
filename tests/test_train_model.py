@@ -399,8 +399,6 @@ def test_processing_trainset_from_directories() -> None:
     prepared_dataset_dict2 = train_model.filter_dataset_dict_for_length(
         dataset_dict2, CONFIGS2
     )
-    # print(prepared_dataset_dict["validation"].sort("norm")[:])
-    # print(prepared_dataset_dict2["validation"].sort("norm")[:])
 
     # Datasets have the same content
     assert str(prepared_dataset_dict["validation"].sort("norm")[:]) == str(
