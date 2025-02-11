@@ -14,15 +14,10 @@ paths_train = [
     "data/dtak-transnormer-basic-v1/data/train/1700-1799",
     "data/dtak-transnormer-basic-v1/data/train/1800-1899",
     ]
-
 paths_validation = [
     "data/dtak-transnormer-basic-v1/data/validation/1600-1699",
     "data/dtak-transnormer-basic-v1/data/validation/1700-1799",
     "data/dtak-transnormer-basic-v1/data/validation/1800-1899",
-    ]
-
-paths_test = [
-    "data/dtak-transnormer-basic-v1/data/test/1600-1699",
     ]
 n_examples_train = [
     1_000_000_000, # all
@@ -33,10 +28,6 @@ n_examples_validation = [
     1_000_000_000, # all
     1_000_000_000, # all
     1_000_000_000, # all
-    ]
-# not used
-n_examples_test = [
-    1,
     ]
 # reverse_labels = false
 # do_shuffle = true

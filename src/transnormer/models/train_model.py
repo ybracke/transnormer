@@ -131,7 +131,6 @@ def load_and_merge_datasets(configs: Dict[str, Any]) -> datasets.DatasetDict:
     splits_and_paths = [
         ("train", configs["data"]["paths_train"]),
         ("validation", configs["data"]["paths_validation"]),
-        ("test", configs["data"]["paths_test"]),
     ]
 
     ds_split_merged = datasets.DatasetDict()
