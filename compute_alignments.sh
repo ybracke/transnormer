@@ -3,15 +3,14 @@
 # Exit in case of errors
 set -e
 
-# Adjust model name
+# TODO: Specify model name
 MODELSDIRNAME=models_2024-03-21
 
-
 # Paths
-TRAINCFG=/home/bracke/code/transnormer/models/$MODELSDIRNAME/training_config.toml
-OUT1=/home/bracke/code/transnormer/hidden/statistics/typestats-orig2norm-$MODELSDIRNAME.pkl
+TRAINCFG=models/$MODELSDIRNAME/training_config.toml
+OUT1=hidden/statistics/typestats-orig2norm-$MODELSDIRNAME.pkl
 # uncomment this and final line, if needed
-# OUT2=/home/bracke/code/transnormer/hidden/statistics/typestats-norm2orig-$MODELSDIRNAME.pkl
+# OUT2=hidden/statistics/typestats-norm2orig-$MODELSDIRNAME.pkl
 
 # Prepare conda environment
 CONDA_BASE=$(conda info --base)

@@ -45,7 +45,7 @@ BASENAME_PRED=preds.jsonl
 PATH_PRED=$DIR_PRED/$BASENAME_PRED
 
 # Edit test_config.toml
-sed -i "22s/.*/checkpoint = \"\/home\/bracke\/code\/transnormer\/models\/${MODELSDIRNAME}\"/" test_config.toml
+sed -i "22s/.*/checkpoint = \"models\/${MODELSDIRNAME}\"/" test_config.toml
 
 echo "Started generating: $(date)"
 
