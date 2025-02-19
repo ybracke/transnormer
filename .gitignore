@@ -93,3 +93,4 @@ training_config_template.toml
 
 hidden/
 notebooks/evaluation
+demo/data
