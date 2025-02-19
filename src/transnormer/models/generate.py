@@ -113,7 +113,7 @@ def main(arguments: Optional[List[str]] = None) -> None:
 
     # (3) Data
     data_path = CONFIGS["data"]["path_test"]
-    split = CONFIGS["data"]["split"]
+    split = CONFIGS["data"].get("split")
     ds = load_data(data_path, split)
 
     # (4) Tokenizers and transliterator
