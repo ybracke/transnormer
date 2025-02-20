@@ -7,10 +7,7 @@ gpu = "cuda:0"
 random_seed = 42
 
 [data]
-path_test = "data/dtak-transnormer-basic-v1/data/test/1700-1799"
-# split = "test"
-# n_examples_test = 100
-max_bytelength = 512
+path_test = "data/dta-reviEvalCorpus-v1/dtaec-test.jsonl"
 
 [tokenizer]
 checkpoint_in = "google/byt5-small"
@@ -20,13 +17,14 @@ padding = "longest" # pad to the longest sequence in batch
 truncation = false
 
 [model]
-checkpoint = "ybracke/transnormer-18-19c-beta-v01"
+checkpoint = "ybracke/transnormer-19c-beta-v02"
 
 [generation]
 batch_size = 32
 
 [generation_config]
 # See here for more options: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-max_new_tokens = 600
+max_new_tokens = 2048
 early_stopping = false
+length_penalty = 2.0 # length_penalty > 0.0 promotes longer sequences
 num_beams = 4

@@ -7,7 +7,7 @@ gpu = "cuda:0"
 random_seed = 42
 
 [data]
-path_test = "data/dtak-transnormer-basic-v1/data/test/1700-1799"
+path_test = "data/dtak-transnormer-basic-v1/data/test/1600-1699"
 # split = "test"
 # n_examples_test = 100
 max_bytelength = 512

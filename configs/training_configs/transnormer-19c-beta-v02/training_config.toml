@@ -1,0 +1,45 @@
+# -*- coding = utf-8 -*-
+
+# Select GPU
+gpu = "cuda:0"
+
+# Fix random seed for reproducibility
+random_seed = 42
+
+# Data
+[data]
+paths_train = [
+    "data/dta-reviEvalCorpus-v1/dtaec-train.jsonl",
+    ]
+paths_validation = [
+    "data/dta-reviEvalCorpus-v1/dtaec-validation.jsonl",
+    ]
+n_examples_train = [
+    1_000_000_000, # all
+    ]
+n_examples_validation = [
+    1_000_000_000, # all
+    ]
+# reverse_labels = false
+# do_shuffle = true
+
+[tokenizer]
+tokenizer = "google/byt5-small"
+padding = "longest"
+min_length_input = 0
+max_length_input = 512
+# max_length_output = 512
+# input_transliterator = "Transliterator1"
+
+# Base model(s)
+[language_models]
+checkpoint_encoder_decoder = "google/byt5-small"
+
+[training_hyperparams]
+batch_size = 8
+epochs = 10
+learning_rate = 0.001
+fp16 = false
+save_strategy = "epoch"
+eval_strategy = "epoch"
+logging_strategy = "epoch"

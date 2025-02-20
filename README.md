@@ -6,6 +6,7 @@ This repository contains code for training and evaluating `Transnormer` models.
 - [`Transnormer`](#transnormer)
   - [Models](#models)
     - [Using Public Models](#using-public-models)
+    - [Training and test configurations for public models](#training-and-test-configurations-for-public-models)
   - [Demos](#demos)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
@@ -57,10 +58,14 @@ print(transnormer(sentence, num_beams=4, max_length=128))
 # >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
 ```
 
+### Training and test configurations for public models
+
+To make training and evaluation for public models reproducible, the `training_config` and `test_config` files (see documentation below) for these models are published in the folder `configs/`.
+
+
 ## Demos
 
 The folder [demo/](./demo/) contains notebooks and scripts demonstrating how transnormer models can be used.
-
 
 
 ## Installation

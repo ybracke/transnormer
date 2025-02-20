@@ -1,0 +1,58 @@
+# -*- coding = utf-8 -*-
+
+# Select GPU
+gpu = "cuda:0"
+per_process_memory_fraction = 0.95
+
+# Fix random seed for reproducibility
+random_seed = 42
+
+# Data
+[data]
+paths_train = [
+    "data/dtak-transnormer-basic-v1/data/train/1600-1699",
+    "data/dtak-transnormer-basic-v1/data/train/1700-1799",
+    "data/dtak-transnormer-basic-v1/data/train/1800-1899",
+    ]
+paths_validation = [
+    "data/dtak-transnormer-basic-v1/data/validation/1600-1699",
+    "data/dtak-transnormer-basic-v1/data/validation/1700-1799",
+    "data/dtak-transnormer-basic-v1/data/validation/1800-1899",
+    ]
+n_examples_train = [
+    1_000_000_000, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
+
+    ]
+n_examples_validation = [
+    1_000_000_000, # all
+    1_000_000_000, # all
+    1_000_000_000, # all
+    ]
+# reverse_labels = false
+do_shuffle = true
+
+[tokenizer]
+tokenizer = "google/byt5-small"
+padding = "longest"
+min_length_input = 0
+max_length_input = 512
+# max_length_output = 512
+# input_transliterator = "Transliterator1"
+
+# Base model(s)
+[language_models]
+checkpoint_encoder_decoder = "models/models_2024-10-16" # this model was the result of an earlier fine-tuning of byt5-small
+from_scratch = false
+
+[training_hyperparams]
+batch_size = 8
+epochs = 5
+learning_rate = 0.0005
+fp16 = false
+save_strategy = "epoch"
+eval_strategy = "epoch"
+logging_strategy = "epoch"
+save_total_limit = 3
+# output_dir = "./models/models_2024-09-12"
