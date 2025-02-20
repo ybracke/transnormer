@@ -4,7 +4,7 @@
 
 The Jupyter Notebook exemplifies the basic usage of transnormer models.
 
-## Script `process-full-text.py`
+## Script `process-text-file.py`
 
 The script is a demo for processing a plain text file containing a whole document with a transnormer model.
 To run the demo, you must pass a text file. You can get an example text file with the bash script:
