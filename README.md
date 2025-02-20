@@ -59,7 +59,7 @@ print(transnormer(sentence, num_beams=4, max_length=128))
 
 ## Demos
 
-See [demo/](./demo/)
+The folder [demo/](./demo/) contains notebooks and scripts demonstrating how transnormer models can be used.
 
 
 
