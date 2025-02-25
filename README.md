@@ -110,7 +110,7 @@ pip install --upgrade pip
 ### 2.a Install package from GitHub
 
 ```bash
-pip install git+https://github.com/ybracke/transnormer.git@dev
+pip install git+https://github.com/ybracke/transnormer.git
 ```
 
 ### 2.b Editable install for developers
@@ -118,7 +118,6 @@ pip install git+https://github.com/ybracke/transnormer.git@dev
 ```bash
 # Clone repo from GitHub
 git clone git@github.com:ybracke/transnormer.git
-git switch dev
 cd ./transnormer
 # install package in editable mode
 pip install -e .
