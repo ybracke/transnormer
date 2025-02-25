@@ -92,4 +92,5 @@ temp/
 training_config_template.toml
 
 hidden/
-notebooks/evaluation
+notebooks/
+demo/data

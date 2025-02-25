@@ -7,6 +7,7 @@ This repository contains code for training and evaluating `Transnormer` models.
   - [Models](#models)
     - [Using Public Models](#using-public-models)
     - [Training and test configurations for public models](#training-and-test-configurations-for-public-models)
+  - [Demos](#demos)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
     - [2.a Install package from GitHub](#2a-install-package-from-github)
@@ -60,6 +61,11 @@ print(transnormer(sentence, num_beams=4, max_length=128))
 ### Training and test configurations for public models
 
 To make training and evaluation for public models reproducible, the `training_config` and `test_config` files (see documentation below) for these models are published in the folder `configs/`.
+
+
+## Demos
+
+The folder [demo/](./demo/) contains notebooks and scripts demonstrating how transnormer models can be used.
 
 
 ## Installation
@@ -126,6 +132,7 @@ To train a model you need the following resources:
 
 1. Prepare environment (see [below](#preparation-1-virtual-environment))
 2. Prepare data (see [below](#preparation-2-data-preprocessing))
+
 #### Quickstart Training
 
 1. Specify the training parameters in the [training config file](#training-config-file)
