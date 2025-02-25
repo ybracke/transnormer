@@ -23,6 +23,7 @@ n_examples_train = [
     1_000_000_000, # all
     1_000_000_000, # all
     1_000_000_000, # all
+
     ]
 n_examples_validation = [
     1_000_000_000, # all
@@ -30,27 +31,28 @@ n_examples_validation = [
     1_000_000_000, # all
     ]
 # reverse_labels = false
-# do_shuffle = true
+do_shuffle = true
 
 [tokenizer]
 tokenizer = "google/byt5-small"
 padding = "longest"
 min_length_input = 0
 max_length_input = 512
+# max_length_output = 512
 # input_transliterator = "Transliterator1"
 
 # Base model(s)
 [language_models]
-checkpoint_encoder_decoder = "google/byt5-small"
+checkpoint_encoder_decoder = "models/models_2024-10-16" # this model was the result of an earlier fine-tuning of byt5-small
 from_scratch = false
 
 [training_hyperparams]
 batch_size = 8
-epochs = 12
+epochs = 5
 learning_rate = 0.0005
 fp16 = false
 save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
 save_total_limit = 3
-# output_dir = "./models/models_X"
+# output_dir = "./models/models_2024-09-12"

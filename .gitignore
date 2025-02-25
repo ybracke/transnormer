@@ -56,9 +56,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# Data
-data/*
-
 # DotEnv configuration
 .env
 
@@ -91,12 +88,9 @@ data/*
 # Dir to dump temporary stuff
 temp/
 
-# Don't track the models
-models/*
-!models/*.dvc
-
 # Don't track the template for training configuration file
 training_config_template.toml
 
 hidden/
-notebooks/evaluation
+notebooks/
+demo/data

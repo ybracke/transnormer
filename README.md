@@ -1,11 +1,12 @@
 # `Transnormer`
 
-`Transnormer` models are byte-level sequence-to-sequence models for normalizing historical German text. 
-This repository contains code for training and evaluating `Transnormer` models. 
+`Transnormer` models are byte-level sequence-to-sequence models for normalizing historical German text.
+This repository contains code for training and evaluating `Transnormer` models.
 
 - [`Transnormer`](#transnormer)
   - [Models](#models)
     - [Using Public Models](#using-public-models)
+    - [Training and test configurations for public models](#training-and-test-configurations-for-public-models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
     - [2.a Install package from GitHub](#2a-install-package-from-github)
@@ -38,13 +39,14 @@ We release *transnormer* models and evaluation results on the Hugging Face Hub.
 
 | Model | Test set | Time period | WordAcc | WordAcc (-i) |
 | --- | --- | --- | --- | --- |
+| Identity baseline | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 91.45 | 93.25 |
 | [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
 
-The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored).
+The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored). The identity baseline only replaces outdated characters by their modern counterpart (e.g. "ſ" -> "s", "aͤ" -> "ä").
 
 ### Using Public Models
 
-Models are easy to use with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
+Transnormer models are easy to use with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
 
 ```python
 from transformers import pipeline
@@ -54,6 +56,13 @@ sentence = "Die Königinn ſaß auf des Pallaſtes mittlerer Tribune."
 print(transnormer(sentence, num_beams=4, max_length=128))
 # >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
 ```
+
+The folder [demo/](./demo/) contains notebooks and scripts that demonstrate in more detail how to use the models.
+
+
+### Training and test configurations for public models
+
+To make training and evaluation for public models reproducible, the `training_config` and `test_config` files (see documentation below) for these models are published in the folder `configs/`.
 
 
 ## Installation
@@ -120,6 +129,7 @@ To train a model you need the following resources:
 
 1. Prepare environment (see [below](#preparation-1-virtual-environment))
 2. Prepare data (see [below](#preparation-2-data-preprocessing))
+
 #### Quickstart Training
 
 1. Specify the training parameters in the [training config file](#training-config-file)
@@ -158,7 +168,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 
 ### Preparation 2: Data preparation
 
-The training and test data must be in JSONL format, where each record is a parallel training sample, e.g. a sentence. The records in the file must at least have the following format:
+The training and test data must be in [JSONL](https://jsonlines.org/) format, where each record is a parallel training sample, e.g. a sentence. The records in the files must at least have the following format:
 
 ```jsonc
 {
@@ -188,22 +198,22 @@ The `gpu` parameter sets the GPU device used for training. You can set it to the
 
 ##### 2. Random Seed (Reproducibility) <!-- omit in toc -->
 
-The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process. 
+The `random_seed` parameter defines a fixed random seed (`42` in the default settings) to ensure reproducibility of the training process.
 
 ##### 3. Data Paths and Subset Sizes <!-- omit in toc -->
 
-The `[data]` section references the training and evaluation data. `paths_train`, `paths_validation`, and `paths_test` are lists of paths to data files. See [data preparation](#preparation-2-data-preparation) for data format. Additionally, `n_examples_train`, `n_examples_validation`, and `n_examples_test` specify the number of examples to be used from each dataset split during training.
+The `[data]` section references the training and evaluation data. `paths_train` and `paths_validation` are lists of paths to JSONL files or to directories that only contain JSONL files. See [data preparation](#preparation-2-data-preparation) for more information on the data format. Additionally, `n_examples_train`, and `n_examples_validation` specify the number of examples to be used from each dataset split during training.
 
 Both `paths_{split}` and `n_examples_{split}` are lists. The number at `n_examples_{split}[i]` refers to the number of examples to use from the data specified at `paths_{split}[i]`. Hence `n_examples_{split}` must contain the same amount of elements as `paths_{split}`. Setting `n_examples_{split}[i]` to a value higher than the number of examples in `paths_{split}[i]` ensures that all examples in this split will be used, but no oversampling is applied.
 
-Per default the samples get shuffled by the training code, set `do_shuffle = false` to prevent this. Set `reverse_labels = true` to switch the labels (`orig` and `norm`) of the training data in order to train a denormalizer.
+Per default the samples get shuffled by the training code, set `do_shuffle = false` to prevent this. Set `reverse_labels = true` to switch the labels (`orig` and `norm`) of the training data in order to train a 'denormalizer'.
 
 ##### 4. Tokenizer Configuration <!-- omit in toc -->
 
 The `[tokenizer]` section holds settings related to tokenization of input and output sequences. Specify the `tokenizer` that belongs to the model, the `padding` behavior (see [huggingface reference](https://huggingface.co/docs/transformers/pad_truncation)).
 If you omit `tokenizer`, the program will attempt to use the tokenizer of the checkpoint given under `language_model`.
 You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
-You can adjust `min_length_input` and `max_length_input` to filter inputs before traing. 
+You can adjust `min_length_input` and `max_length_input` to filter inputs before traing.
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
@@ -211,12 +221,12 @@ Under `[language_models]`, specify the model that is to be fine-tuned. Currently
 
 ##### 6. Training Hyperparameters <!-- omit in toc -->
 
-The `[training_hyperparams]` section specifies essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), `fp16` (toggles half-precision training), and `learning_rate`. Refer to [`transformers.Seq2SeqTrainingArguments`](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.Seq2SeqTrainingArguments) for details. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively. 
+The `[training_hyperparams]` section specifies essential training parameters, such as `batch_size` (determines the number of examples in each training batch), `epochs` (indicates the number of training epochs), `fp16` (toggles half-precision training), and `learning_rate`. Refer to [`transformers.Seq2SeqTrainingArguments`](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.Seq2SeqTrainingArguments) for details. You can control the frequency of logging, evaluation, and model saving using `logging_steps`, `eval_steps`, and `save_steps` respectively.
 
 
 ### 2. Generating normalizations
 
-The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file) and saves a JSONL file with the same properties as the input file, plus a `pred` property for the predicted normalization. 
+The script `src/transnormer/models/generate.py` generates normalizations given a [config file](#test-config-file) and saves a JSONL file with the same properties as the input file, plus a `pred` property for the predicted normalization.
 
 ```
 usage: generate.py [-h] [-c CONFIG] [-o OUT]
@@ -232,7 +242,15 @@ optional arguments:
 
 #### Test config file
 
-The test config file configures which device, data, tokenizer, model and generation parameters are used when generating normalizations. Refer to `test_config.toml` for a template and the description of the [training config file](#training-config-file) for a detailed description of the sections. Note that, currently, only a single test data file is allowed as input.
+The test config file configures which data, tokenizer, model and generation parameters are used when generating normalizations with `generate.py`. The template file `test_config.toml` illustrates the usage; some sections are identical to the [training config file](#training-config-file). The following is a description of the most relevant parts of the config file.
+
+##### Test data <!-- omit in toc -->
+
+The `[data]` specifies information concerning the test data.
+- `path_test` references either a local JSONL file (e.g. `"data/test.jsonl"`), a local directory containing JSONL files (e.g. `"data/test"`) or the name of a Hugging Face dataset (e.g. `"ybracke/dta-reviEvalCorpus-v1"`).
+- Only if `path_test` is a Hugging Face dataset, `split` should be specified. It must reference any of the datasets existing splits (e.g. `"test"`).
+- `max_bytelength` is optional and can be specified to set an upper boundary for the length of individual inputs, i.e. to remove all samples from the test set where the `"orig"` string exceeds the byte length specified here.
+- `n_examples_test` is optional and can be included to specify the number of test examples to use. If this is specified to a number *N* lower than the total of test set samples (possibly after filtering according to `max_bytelength`), a random *N* samples will be selected for testing.
 
 ##### Generation configurations <!-- omit in toc -->
 
@@ -240,7 +258,7 @@ The `[generation_config]` section contains parameters related to generation, e.g
 
 ### 3. Evaluation
 
-The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see [below](#32-pred-evalsh)).  
+The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see [below](#32-pred-evalsh)).
 
 #### 3.1 Get evaluation metrics
 
@@ -283,11 +301,11 @@ python3 src/transnormer/evaluation/evaluate.py \
   --pred-file d037b975.jsonl \
   --ref-field=norm --pred-field=pred -a both \
   --sent-wise-file sent_scores_d037b975.pkl \
-  --test-config d1b1ea77.toml 
+  --test-config d1b1ea77.toml
 ```
 
-In this case, the gold normalizations (*ref*) and auto-generated normalizations (*pred*) are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument. 
-If *ref* and *pred* texts are stored in different files, the examples in the files must be in the same order. 
+In this case, the gold normalizations (*ref*) and auto-generated normalizations (*pred*) are stored in the same JSONL file, therefore `--ref-file` and `--pred-file` take the same argument.
+If *ref* and *pred* texts are stored in different files, the examples in the files must be in the same order.
 Global evaluation metrics are printed to stdout by default and can be redirected into a file.
 
 If you have a single JSONL file with original input, predictions and gold labels and you want to write the sentence-wise accuracy scores (that have been computed by `evaluate.py`) to this file, you can do this with `src/transnormer/evaluation/add_sent_scores.py`:

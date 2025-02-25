@@ -2,7 +2,6 @@
 
 # Select GPU
 gpu = "cuda:0"
-per_process_memory_fraction = 0.95
 
 # Fix random seed for reproducibility
 random_seed = 42
@@ -10,23 +9,15 @@ random_seed = 42
 # Data
 [data]
 paths_train = [
-    "data/dtak-transnormer-basic-v1/data/train/1600-1699",
-    "data/dtak-transnormer-basic-v1/data/train/1700-1799",
-    "data/dtak-transnormer-basic-v1/data/train/1800-1899",
+    "data/dta-reviEvalCorpus-v1/dtaec-train.jsonl",
     ]
 paths_validation = [
-    "data/dtak-transnormer-basic-v1/data/validation/1600-1699",
-    "data/dtak-transnormer-basic-v1/data/validation/1700-1799",
-    "data/dtak-transnormer-basic-v1/data/validation/1800-1899",
+    "data/dta-reviEvalCorpus-v1/dtaec-validation.jsonl",
     ]
 n_examples_train = [
     1_000_000_000, # all
-    1_000_000_000, # all
-    1_000_000_000, # all
     ]
 n_examples_validation = [
-    1_000_000_000, # all
-    1_000_000_000, # all
     1_000_000_000, # all
     ]
 # reverse_labels = false
@@ -37,20 +28,18 @@ tokenizer = "google/byt5-small"
 padding = "longest"
 min_length_input = 0
 max_length_input = 512
+# max_length_output = 512
 # input_transliterator = "Transliterator1"
 
 # Base model(s)
 [language_models]
 checkpoint_encoder_decoder = "google/byt5-small"
-from_scratch = false
 
 [training_hyperparams]
 batch_size = 8
-epochs = 12
-learning_rate = 0.0005
+epochs = 10
+learning_rate = 0.001
 fp16 = false
 save_strategy = "epoch"
 eval_strategy = "epoch"
 logging_strategy = "epoch"
-save_total_limit = 3
-# output_dir = "./models/models_X"

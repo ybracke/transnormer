@@ -65,10 +65,6 @@ def test_tokenize_dataset_dict_single_tokenizer() -> None:
                 "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
                 "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 1_000_000,
                 1_000_000,
@@ -77,15 +73,10 @@ def test_tokenize_dataset_dict_single_tokenizer() -> None:
                 1_000_000,
                 1_000_000,
             ],
-            "n_examples_test": [
-                1_000_000,
-                1_000_000,
-            ],
         },
         "subset_sizes": {"train": 3, "validation": 2, "test": 1},
         "tokenizer": {
             #     "max_length_input": 512,
-            #     "max_length_output": 512,
         },
         "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
         "training_hyperparams": {
@@ -117,17 +108,11 @@ def test_filter_dataset_dict_for_length() -> None:
             "paths_validation": [
                 "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 1_000_000,
             ],
             "n_examples_validation": [
                 1_000_000,
-            ],
-            "n_examples_test": [
-                1,
             ],
         },
         "tokenizer": {
@@ -158,7 +143,7 @@ def test_filter_dataset_dict_for_length() -> None:
     assert len(filtered_dataset_dict["train"]) == 1
 
 
-def test_load_and_merge_datasets_full_sets() -> None:
+def test_load_and_merge_datasets_from_files_full_sets() -> None:
     CONFIGS: Dict[str, Any] = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -171,19 +156,11 @@ def test_load_and_merge_datasets_full_sets() -> None:
                 "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
                 "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 1_000_000,
                 1_000_000,
             ],
             "n_examples_validation": [
-                1_000_000,
-                1_000_000,
-            ],
-            "n_examples_test": [
                 1_000_000,
                 1_000_000,
             ],
@@ -194,10 +171,9 @@ def test_load_and_merge_datasets_full_sets() -> None:
     dataset = train_model.load_and_merge_datasets(CONFIGS)
     assert dataset["train"].num_rows == 6
     assert dataset["validation"].num_rows == 6
-    assert dataset["test"].num_rows == 6
 
 
-def test_load_and_merge_datasets_subsets1() -> None:
+def test_load_and_merge_datasets_from_files_subsets1() -> None:
     CONFIGS: Dict[str, Any] = {
         "gpu": "cuda:0",
         "random_seed": 42,
@@ -210,10 +186,6 @@ def test_load_and_merge_datasets_subsets1() -> None:
                 "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
                 "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 3,
                 3,
@@ -222,10 +194,6 @@ def test_load_and_merge_datasets_subsets1() -> None:
                 2,
                 2,
             ],
-            "n_examples_test": [
-                1,
-                1,
-            ],
         },
         # The rest of the configs doesn't matter ...
     }
@@ -233,7 +201,154 @@ def test_load_and_merge_datasets_subsets1() -> None:
     dataset = train_model.load_and_merge_datasets(CONFIGS)
     assert dataset["train"].num_rows == 6
     assert dataset["validation"].num_rows == 4
-    assert dataset["test"].num_rows == 2
+
+
+def test_load_and_merge_datasets_from_directories_full_sets() -> None:
+    CONFIGS: Dict[str, Any] = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dir1/identical.jsonl",
+                "tests/testdata/jsonl/dir1/reverse.jsonl",
+                "tests/testdata/jsonl/dir2/dtaeval-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dir1/identical.jsonl",
+                "tests/testdata/jsonl/dir1/reverse.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000_000,
+                1_000_000_000,
+                1_000_000_000,
+            ],
+            "n_examples_validation": [
+                100000,
+                100000,
+            ],
+        },
+        # The rest of the configs doesn't matter ...
+    }
+    dataset = train_model.load_and_merge_datasets(CONFIGS)
+
+    CONFIGS2: Dict[str, Any] = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dir1",
+                "tests/testdata/jsonl/dir2",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dir1",
+            ],
+            "n_examples_train": [
+                1_000_000_000,
+                1_000_000_000,
+            ],
+            "n_examples_validation": [
+                100000,
+            ],
+        },
+        # The rest of the configs doesn't matter ...
+    }
+    dataset2 = train_model.load_and_merge_datasets(CONFIGS2)
+
+    # assert equality of datasets' contents
+    assert (
+        dataset["validation"].sort("norm")[:] == dataset2["validation"].sort("norm")[:]
+    )
+    assert dataset["train"].sort("norm")[:] == dataset2["train"].sort("norm")[:]
+
+
+def test_processing_trainset_from_directories() -> None:
+    CONFIGS: Dict[str, Any] = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dir1/identical.jsonl",
+                "tests/testdata/jsonl/dir1/reverse.jsonl",
+                "tests/testdata/jsonl/dir2/dtaeval-train-head3.jsonl",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dir1/identical.jsonl",
+                "tests/testdata/jsonl/dir1/reverse.jsonl",
+            ],
+            "n_examples_train": [
+                1_000_000_000,
+                1_000_000_000,
+                1_000_000_000,
+            ],
+            "n_examples_validation": [
+                100000,
+                100000,
+            ],
+        },
+        "tokenizer": {
+            "min_length_input": 0,
+            "max_length_input": 120,
+            "padding": "longest",
+        },
+        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
+        "training_hyperparams": {
+            "batch_size": 10,
+        },
+        # The rest of the configs doesn't matter ...
+    }
+
+    CONFIGS2: Dict[str, Any] = {
+        "gpu": "cuda:0",
+        "random_seed": 42,
+        "data": {
+            "paths_train": [
+                "tests/testdata/jsonl/dir1",
+                "tests/testdata/jsonl/dir2",
+            ],
+            "paths_validation": [
+                "tests/testdata/jsonl/dir1",
+            ],
+            "n_examples_train": [
+                1_000_000_000,
+                1_000_000_000,
+            ],
+            "n_examples_validation": [
+                100000,
+            ],
+        },
+        "tokenizer": {
+            "min_length_input": 0,
+            "max_length_input": 120,
+            "padding": "longest",
+        },
+        "language_models": {"checkpoint_encoder_decoder": "google/byt5-small"},
+        "training_hyperparams": {
+            "batch_size": 10,
+        },
+        # The rest of the configs doesn't matter ...
+    }
+    dataset_dict = train_model.load_and_merge_datasets(CONFIGS)
+    dataset_dict2 = train_model.load_and_merge_datasets(CONFIGS2)
+    tokenizer = train_model.load_tokenizer(CONFIGS)
+    tokenizer2 = train_model.load_tokenizer(CONFIGS2)
+    dataset_dict = train_model.tokenize_dataset_dict(dataset_dict, tokenizer, CONFIGS)
+    dataset_dict2 = train_model.tokenize_dataset_dict(
+        dataset_dict2, tokenizer2, CONFIGS2
+    )
+    prepared_dataset_dict = train_model.filter_dataset_dict_for_length(
+        dataset_dict, CONFIGS
+    )
+    prepared_dataset_dict2 = train_model.filter_dataset_dict_for_length(
+        dataset_dict2, CONFIGS2
+    )
+
+    # Datasets have the same content
+    assert str(prepared_dataset_dict["validation"].sort("norm")[:]) == str(
+        prepared_dataset_dict2["validation"].sort("norm")[:]
+    )
+    assert str(prepared_dataset_dict["train"].sort("norm")[:]) == str(
+        prepared_dataset_dict2["train"].sort("norm")[:]
+    )
 
 
 def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
@@ -249,10 +364,6 @@ def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
                 "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
                 "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-                "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 3,
                 3,
@@ -260,10 +371,6 @@ def test_warmstart_seq2seq_model_single_encoder_decoder() -> None:
             "n_examples_validation": [
                 2,
                 2,
-            ],
-            "n_examples_test": [
-                1,
-                1,
             ],
         },
         "tokenizer": {"padding": "longest"},
@@ -301,17 +408,11 @@ def test_data_collation() -> None:
             "paths_validation": [
                 "tests/testdata/jsonl/dtaeval-train-16.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/dtaeval-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 16,
             ],
             "n_examples_validation": [
                 16,
-            ],
-            "n_examples_test": [
-                1,
             ],
         },
         "tokenizer": {
@@ -408,10 +509,6 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
                 "tests/testdata/jsonl/ascii-reverse.jsonl",
                 # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
             ],
-            "paths_test": [
-                "tests/testdata/jsonl/ascii-reverse.jsonl",
-                # "tests/testdata/jsonl/dtak-1600-1699-train-head3.jsonl",
-            ],
             "n_examples_train": [
                 1,
                 1,
@@ -432,13 +529,14 @@ def test_train_seq2seq_model_single_encoder_decoder() -> None:
         "training_hyperparams": {
             "batch_size": 1,
             "epochs": 2,
-            # "learning_rate" : 0.001,
+            "learning_rate": 0.001,
             "logging_steps": 1000,
             "eval_steps": 1000,
             "save_strategy": "epoch",
             "eval_strategy": "epoch",
             "logging_strategy": "epoch",
             "fp16": False,  # set to False for byT5-based models
+            "save_total_limit": 1,
         },
     }
     gpu_index = CONFIGS.get("gpu")
