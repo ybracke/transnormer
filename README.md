@@ -1,11 +1,15 @@
 # `Transnormer`
 
 `Transnormer` models are byte-level sequence-to-sequence models for normalizing historical German text.
-This repository contains code for training and evaluating `Transnormer` models.
+
+>[!NOTE]
+> * If you are only interested in using a *Transnormer* model for normalizing your data, see the first section of the README ([Public models](#public-models)).
+> * If you want to train your own *Transnormer* model or are interested in the implementation details, see also the rest of the README.
 
 - [`Transnormer`](#transnormer)
-  - [Models](#models)
-    - [Using Public Models](#using-public-models)
+  - [Public models](#public-models)
+    - [Overview](#overview)
+    - [How to normalize with the models](#how-to-normalize-with-the-models)
     - [Training and test configurations for public models](#training-and-test-configurations-for-public-models)
   - [Installation](#installation)
     - [1. Set up environment](#1-set-up-environment)
@@ -29,24 +33,31 @@ This repository contains code for training and evaluating `Transnormer` models.
   - [License](#license)
 
 
+## Public models
 
-## Models
+We release *Transnormer* models and evaluation results on the [Hugging Face Hub](https://huggingface.co/collections/ybracke/transnormer-models-67b310d634cd745a056c2493).
 
-**Note:** This section is continously updated.
+### Overview
 
-We release *transnormer* models and evaluation results on the Hugging Face Hub.
-
+This is an overview of the published models and their evaluation results in comparison with an identity baseline:
 
 | Model | Test set | Time period | WordAcc | WordAcc (-i) |
 | --- | --- | --- | --- | --- |
 | Identity baseline | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 91.45 | 93.25 |
 | [transnormer-19c-beta-v02](https://huggingface.co/ybracke/transnormer-19c-beta-v02) | [DTA reviEvalCorpus-v1](https://huggingface.co/datasets/ybracke/dta-reviEvalCorpus-v1) | 1780-1899 | 98.88 | 99.34 |
+| Identity baseline | [DTAK-transnormer-v1 (18c)](https://huggingface.co/datasets/ybracke/dtak-transnormer-basic-v1/tree/main/data/test/1700-1799) | 1700-1799 | 88.94 | 90.42 |
+| [transnormer-18-19c-beta-v01](https://huggingface.co/ybracke/transnormer-18-19c-beta-v01) | [DTAK-transnormer-v1 (18c)](https://huggingface.co/datasets/ybracke/dtak-transnormer-basic-v1/tree/main/data/test/1700-1799) | 1700-1799 | 99.53 | 99.62 |
+| Identity baseline | [DTAK-transnormer-v1 (19c)](https://huggingface.co/datasets/ybracke/dtak-transnormer-basic-v1/tree/main/data/test/1800-1899) | 1800-1899 | 95.00 | 95.31 |
+| [transnormer-18-19c-beta-v01](https://huggingface.co/ybracke/transnormer-18-19c-beta-v01) | [DTAK-transnormer-v1 (19c)](https://huggingface.co/datasets/ybracke/dtak-transnormer-basic-v1/tree/main/data/test/1800-1899) | 1800-1899 | 99.46 | 99.53 |
 
-The metric *WordAcc* is the harmonized word accurracy (Bawden et al. 2022) explained [below](#31-get-evaluation-metrics); *-i* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored). The identity baseline only replaces outdated characters by their modern counterpart (e.g. "ſ" -> "s", "aͤ" -> "ä").
+Notes:
+* The metric *WordAcc* is a harmonized word accurracy (Bawden et al. 2022), more details can be found [below](#31-get-evaluation-metrics).
+* *(-i)* denotes a case insensitive version (i.e. deviations in casing between prediction and gold normalization are ignored).
+* For the identity baseline we only replace outdated characters by their modern counterpart (e.g. "ſ" -> "s", "aͤ" -> "ä") and otherwise treat the original as the normalization.
 
-### Using Public Models
+### How to normalize with the models
 
-Transnormer models are easy to use with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
+Transnormer models are easy to use for generating normalizations with the [`transformers`](https://huggingface.co/docs/transformers/index) library:
 
 ```python
 from transformers import pipeline
@@ -57,13 +68,14 @@ print(transnormer(sentence, num_beams=4, max_length=128))
 # >>> [{'generated_text': 'Die Königin saß auf des Palastes mittlerer Tribüne.'}]
 ```
 
-The folder [demo/](./demo/) contains notebooks and scripts that demonstrate in more detail how to use the models.
+The folder [demo/](./demo/) contains notebooks and scripts that demonstrate in more detail how to apply the models.
 
 
 ### Training and test configurations for public models
 
 To make training and evaluation for public models reproducible, the `training_config` and `test_config` files (see documentation below) for these models are published in the folder `configs/`.
 
+---
 
 ## Installation
 
@@ -212,8 +224,6 @@ Per default the samples get shuffled by the training code, set `do_shuffle = fal
 
 The `[tokenizer]` section holds settings related to tokenization of input and output sequences. Specify the `tokenizer` that belongs to the model, the `padding` behavior (see [huggingface reference](https://huggingface.co/docs/transformers/pad_truncation)).
 If you omit `tokenizer`, the program will attempt to use the tokenizer of the checkpoint given under `language_model`.
-You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
-You can adjust `min_length_input` and `max_length_input` to filter inputs before traing.
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
@@ -338,12 +348,8 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 
 #### 3.2 `pred_eval.sh`
 
-This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
-
 
 ## Project
-
-This project is developed at the [Berlin-Brandenburg Academy of Sciences and Humanities](https://www.bbaw.de) (Berlin-Brandenburgische Akademie der Wissenschaften, BBAW) within the national research data infrastructure (Nationale Forschungsdateninfrastruktur, NFDI) [Text+](https://www.text-plus.org/).
 
 
 ## License
