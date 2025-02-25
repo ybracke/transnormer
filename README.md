@@ -224,6 +224,8 @@ Per default the samples get shuffled by the training code, set `do_shuffle = fal
 
 The `[tokenizer]` section holds settings related to tokenization of input and output sequences. Specify the `tokenizer` that belongs to the model, the `padding` behavior (see [huggingface reference](https://huggingface.co/docs/transformers/pad_truncation)).
 If you omit `tokenizer`, the program will attempt to use the tokenizer of the checkpoint given under `language_model`.
+You can specify an `input_transliterator` for data preprocessing. This option is not implemented for the byte-based models and might be removed in the future.
+You can adjust `min_length_input` and `max_length_input` to filter inputs before traing.
 
 ##### 5. Language Model Selection <!-- omit in toc -->
 
@@ -348,8 +350,12 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 
 #### 3.2 `pred_eval.sh`
 
+This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
+
 
 ## Project
+
+This project is developed at the [Berlin-Brandenburg Academy of Sciences and Humanities](https://www.bbaw.de) (Berlin-Brandenburgische Akademie der Wissenschaften, BBAW) within the national research data infrastructure (Nationale Forschungsdateninfrastruktur, NFDI) [Text+](https://www.text-plus.org/).
 
 
 ## License
