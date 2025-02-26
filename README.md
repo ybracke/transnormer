@@ -28,7 +28,7 @@
       - [Test config file](#test-config-file)
     - [3. Evaluation](#3-evaluation)
       - [3.1 Get evaluation metrics](#31-get-evaluation-metrics)
-      - [3.2 `pred_eval.sh`](#32-pred_evalsh)
+    - [Bash scripts](#bash-scripts)
   - [Project](#project)
   - [License](#license)
 
@@ -346,10 +346,28 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
 ```
 
+### Bash scripts
 
-#### 3.2 `pred_eval.sh`
+The bash scripts `pred_eval.sh` and `train_pred_eval.sh` provide a way to run prediction + evaluation or training + prediction + evaluation with a single command:
 
-This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
+```sh
+# Prediction and evaluation
+nohup nice bash pred_eval.sh &
+
+# Training, prediction and evaluation
+nohup nice bash train_pred_eval.sh &
+```
+
+The scripts run each of the steps and store files under the paths specified in the scripts. Config and predicition files are stored with a unique name derived from a hash value; evaluation results are redirected into a JSONL file.
+If you work with a custom directory structure, you must adjust the paths in the script. Otherwise, if you want to run the bash scripts without any changes, you must first set up the exact same directory and file structure in your `transnormer` directory that the scripts assume:
+
+```sh
+cd transnormer
+# Create necessary directories and files
+mkdir -p hidden/predictions hidden/test_configs hidden/sent_scores hidden/statistics
+touch hidden/eval.jsonl
+```
+
 
 
 ## Project
