@@ -269,7 +269,7 @@ The `[generation_config]` section contains parameters related to generation, e.g
 
 ### 3. Evaluation
 
-The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see [below](#32-pred-evalsh)).
+The quickest way to generate normalizations and get evaluation metrics is to adjust the [test config file](#test-config-file) and run `$ bash pred_eval.sh` (see under [Bash scripts](#bash-scripts)).
 
 #### 3.1 Get evaluation metrics
 
@@ -358,8 +358,8 @@ nohup nice bash pred_eval.sh &
 nohup nice bash train_pred_eval.sh &
 ```
 
-The scripts run each of the steps and store files under the paths specified in the scripts. Config and predicition files are stored with a unique name derived from a hash value; evaluation results are redirected into a JSONL file.
-If you work with a custom directory structure, you must adjust the paths in the script. Otherwise, if you want to run the bash scripts without any changes, you must first set up the exact same directory and file structure in your `transnormer` directory that the scripts assume:
+The scripts run each of the steps and store files that are created or copied in the process under the paths specified in the scripts. Config and predicition files are stored with a unique name derived from a hash value; evaluation results are redirected into an evaluation file.
+If you want to work with a custom directory structure, you must adjust the paths in the script. Otherwise, if you want to run the bash scripts without changing them, you must first set up the exact same directory and file structure in your `transnormer` directory that is assumed in the scripts:
 
 ```sh
 cd transnormer
