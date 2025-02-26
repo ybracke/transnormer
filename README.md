@@ -127,10 +127,10 @@ pip install -r requirements-dev.txt
 
 ### 3. Requirements
 
-To train a model you need the following resources:
+To train a *Transnormer* model you need the following resources:
 
 * A pre-trained encoder-decoder model (available on the [Huggingface Model Hub](huggingface.co/models))
-* A dataset of historical language documents with (gold-)normalized labels
+* A parallel corpus of dataset of historical language documents with (gold-)normalized labels (also available on the [Hugging Face Hub](https://huggingface.co/collections/ybracke/historical-text-normalization-datasets-67bf0b8909bdb514388272f7))
 * A file specifying the training configurations, see [Training config file](#training-config-file)
 
 
