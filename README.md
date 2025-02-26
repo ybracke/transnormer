@@ -28,7 +28,7 @@
       - [Test config file](#test-config-file)
     - [3. Evaluation](#3-evaluation)
       - [3.1 Get evaluation metrics](#31-get-evaluation-metrics)
-      - [3.2 `pred_eval.sh`](#32-pred_evalsh)
+    - [Bash scripts](#bash-scripts)
   - [Project](#project)
   - [License](#license)
 
@@ -127,10 +127,10 @@ pip install -r requirements-dev.txt
 
 ### 3. Requirements
 
-To train a model you need the following resources:
+To train a *Transnormer* model you need the following resources:
 
 * A pre-trained encoder-decoder model (available on the [Huggingface Model Hub](huggingface.co/models))
-* A dataset of historical language documents with (gold-)normalized labels
+* A parallel corpus of dataset of historical language documents with (gold-)normalized labels (also available on the [Hugging Face Hub](https://huggingface.co/collections/ybracke/historical-text-normalization-datasets-67bf0b8909bdb514388272f7))
 * A file specifying the training configurations, see [Training config file](#training-config-file)
 
 
@@ -346,10 +346,28 @@ python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hid
 python3 src/transnormer/evaluation/add_sent_scores.py hidden/sent_scores.pkl hidden/predictions/8ae3fd47.jsonl -p score_i
 ```
 
+### Bash scripts
 
-#### 3.2 `pred_eval.sh`
+The bash scripts `pred_eval.sh` and `train_pred_eval.sh` provide a way to run prediction + evaluation or training + prediction + evaluation with a single command:
 
-This bash script runs the python scripts for generation and evaluation and performs copy/rename operations to automatically store config and prediction files under unique names via hashed file names.
+```sh
+# Prediction and evaluation
+nohup nice bash pred_eval.sh &
+
+# Training, prediction and evaluation
+nohup nice bash train_pred_eval.sh &
+```
+
+The scripts run each of the steps and store files that are created or copied in the process under the paths specified in the scripts. Config and predicition files are stored with a unique name derived from a hash value; evaluation results are redirected into an evaluation file.
+If you want to work with a custom directory structure, you must adjust the paths in the script. Otherwise, if you want to run the bash scripts without changing them, you must first set up the exact same directory and file structure in your `transnormer` directory that is assumed in the scripts:
+
+```sh
+cd transnormer
+# Create necessary directories and files
+mkdir -p hidden/predictions hidden/test_configs hidden/sent_scores hidden/statistics
+touch hidden/eval.jsonl
+```
+
 
 
 ## Project
