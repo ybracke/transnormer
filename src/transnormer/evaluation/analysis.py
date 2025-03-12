@@ -76,10 +76,7 @@ def make_error_tokens_df(sents_df: pd.DataFrame) -> pd.DataFrame:
             for (orig1, pred, _) in row["alignm_orig2pred"]
             if (orig1, pred) != ("", "")
         ]
-        # if index == 20:
-        #     print(len(row['alignm_orig2norm']), len(row['alignm_orig2pred']))
-        #     print(row['alignm_orig2pred'])
-        # for ((orig1, gold, _), (orig2, pred, _)) in zip(row['alignm_orig2norm'], row['alignm_orig2pred']):
+
         for (orig1, gold), (orig2, pred) in zip(
             alignments_orig2norm, alignments_orig2pred
         ):
